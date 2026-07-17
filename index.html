@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexShop — Digital Gaming Marketplace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <nav class="navbar">
+        <div class="brand">
+            <img src="images/nexshop-icon.svg" class="logo" alt="NexShop logo">
+            <div>
+                <h1>Nex<span>Shop</span></h1>
+                <div class="tagline">Play More. Pay Less.</div>
+            </div>
+        </div>
+
+        <button class="menu-toggle" id="menuToggle" aria-label="Buka menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+
+        <div class="menu" id="navMenu">
+            <a href="#top">Home</a>
+            <a href="#games">Game</a>
+            <button class="menu-account-btn" id="accountBtn">Login</button>
+        </div>
+
+        <button class="cart-btn" id="cartBtn" aria-label="Buka keranjang">
+            🛒 <span class="cart-count" id="cartCount">0</span>
+        </button>
+    </nav>
+</header>
+
+<section class="hero" id="top">
+    <div class="hero-text">
+        <span class="hero-badge">🔥 Promo Minggu Ini</span>
+        <h2>Stok Terbatas, Harga Bersahabat</h2>
+        <p>Game key & akses premium mulai dari Rp29.000. Diskon berakhir dalam waktu terbatas.</p>
+        <a href="#games" class="hero-cta">Jelajahi Katalog</a>
+    </div>
+</section>
+
+<main>
+<section class="games" id="games">
+    <div class="section-heading">
+        <h3>Katalog Populer</h3>
+        <p>Dipilih langsung dari yang paling laris minggu ini</p>
+    </div>
+
+    <div class="category-filter" id="categoryFilter"></div>
+
+    <div class="card-grid" id="cardGrid"></div>
+</section>
+</main>
+
+<footer class="site-footer">
+    <div class="footer-brand">Nex<span>Shop</span></div>
+    <p>Marketplace gaming digital terpercaya. Transaksi aman, proses cepat.</p>
+    <p class="footer-copy">© 2026 NexShop. All rights reserved.</p>
+</footer>
+
+<!-- Product Detail Modal -->
+<div class="overlay" id="productOverlay">
+    <div class="modal product-modal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+        <button class="modal-close" data-close="productOverlay" aria-label="Tutup">✕</button>
+        <div class="product-modal-body">
+            <div class="product-modal-img">
+                <img id="pmImage" src="" alt="">
+                <span class="badge" id="pmBadge"></span>
+            </div>
+            <div class="product-modal-info">
+                <h3 id="pmTitle"></h3>
+                <div class="pm-rating">
+                    <span id="pmStars"></span>
+                    <span class="pm-sold" id="pmSold"></span>
+                </div>
+                <p class="pm-desc" id="pmDesc"></p>
+                <div class="pm-price" id="pmPrice"></div>
+
+                <div class="pm-qty">
+                    <span>Jumlah</span>
+                    <div class="qty-control">
+                        <button id="pmQtyMinus" aria-label="Kurangi jumlah">−</button>
+                        <span id="pmQtyValue">1</span>
+                        <button id="pmQtyPlus" aria-label="Tambah jumlah">+</button>
+                    </div>
+                </div>
+
+                <button class="btn-primary pm-add" id="pmAddBtn">Tambah ke Keranjang</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cart Drawer -->
+<div class="overlay" id="cartOverlay">
+    <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+        <div class="drawer-header">
+            <h3 id="cartTitle">Keranjang</h3>
+            <button class="modal-close" data-close="cartOverlay" aria-label="Tutup">✕</button>
+        </div>
+        <div class="drawer-body" id="cartItems">
+            <!-- populated by JS -->
+        </div>
+        <div class="drawer-footer">
+            <div class="cart-total-row">
+                <span>Total</span>
+                <span id="cartTotal">Rp0</span>
+            </div>
+            <button class="btn-primary" id="checkoutBtn">Checkout</button>
+        </div>
+    </div>
+</div>
+
+<!-- Login / Register Modal -->
+<div class="overlay" id="authOverlay">
+    <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+        <button class="modal-close" data-close="authOverlay" aria-label="Tutup">✕</button>
+        <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Masuk</button>
+            <button class="auth-tab" data-tab="register">Daftar</button>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+            <h3 id="authTitle">Selamat Datang Kembali</h3>
+            <label>Email
+                <input type="email" id="loginEmail" required placeholder="kamu@email.com">
+            </label>
+            <label>Kata Sandi
+                <input type="password" id="loginPassword" required minlength="4" placeholder="••••••••">
+            </label>
+            <p class="auth-error" id="loginError"></p>
+            <button type="submit" class="btn-primary">Masuk</button>
+        </form>
+
+        <form id="registerForm" class="auth-form hidden">
+            <h3>Buat Akun Baru</h3>
+            <label>Nama
+                <input type="text" id="regName" required placeholder="Nama kamu">
+            </label>
+            <label>Email
+                <input type="email" id="regEmail" required placeholder="kamu@email.com">
+            </label>
+            <label>Kata Sandi
+                <input type="password" id="regPassword" required minlength="4" placeholder="Minimal 4 karakter">
+            </label>
+            <p class="auth-error" id="regError"></p>
+            <button type="submit" class="btn-primary">Daftar</button>
+        </form>
+    </div>
+</div>
+
+<!-- Account Dropdown -->
+<div class="account-dropdown" id="accountDropdown">
+    <div class="account-info">
+        <div class="account-avatar" id="accountAvatar"></div>
+        <div>
+            <div class="account-name" id="accountName"></div>
+            <div class="account-email" id="accountEmail"></div>
+        </div>
+    </div>
+    <button class="dropdown-item" id="myOrdersBtn">Pesanan Saya</button>
+    <button class="dropdown-item logout" id="logoutBtn">Keluar</button>
+</div>
+
+<!-- Checkout Modal -->
+<div class="overlay" id="checkoutOverlay">
+    <div class="modal checkout-modal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+        <button class="modal-close" data-close="checkoutOverlay" aria-label="Tutup">✕</button>
+        <div id="checkoutStep">
+            <h3 id="checkoutTitle">Selesaikan Pesanan</h3>
+            <form id="checkoutForm">
+                <label>Nama Penerima
+                    <input type="text" id="checkoutName" required placeholder="Nama lengkap">
+                </label>
+                <label>Email
+                    <input type="email" id="checkoutEmail" required placeholder="kamu@email.com">
+                </label>
+                <label>Metode Pembayaran
+                    <select id="checkoutPayment">
+                        <option value="qris">QRIS</option>
+                        <option value="bank">Transfer Bank</option>
+                        <option value="ewallet">E-Wallet</option>
+                    </select>
+                </label>
+                <div class="checkout-summary" id="checkoutSummary"></div>
+                <button type="submit" class="btn-primary">Bayar Sekarang</button>
+            </form>
+        </div>
+        <div id="checkoutSuccess" class="hidden">
+            <div class="success-icon">✓</div>
+            <h3>Pesanan Berhasil!</h3>
+            <p id="checkoutSuccessMsg">Terima kasih, pesanan kamu sedang diproses.</p>
+            <button class="btn-primary" data-close="checkoutOverlay">Selesai</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
