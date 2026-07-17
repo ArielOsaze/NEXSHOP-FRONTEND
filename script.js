@@ -7,7 +7,7 @@
 let PRODUCTS = [];
 let selectedCategory = "Semua";
 
-const API_BASE = "http://localhost:3000/api";
+const API_BASE = "https://nexshop-backend-production.up.railway.app/api";
 
 const rupiah = (n) => "Rp" + n.toLocaleString("id-ID");
 const stars = (rating) => "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
