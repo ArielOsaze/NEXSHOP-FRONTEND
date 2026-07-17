@@ -4,6 +4,8 @@
 
 const token = localStorage.getItem("token");
 
+const API_BASE = "https://nexshop-backend-production.up.railway.app/api";
+
 if (!token) {
     window.location.href = "login.html";
 }
@@ -23,8 +25,8 @@ let currentImage = "";
 async function loadProducts() {
 
     try {
-
-        const res = await fetch("/api/products", {
+const res = await fetch(`${API_BASE}/products`, {
+        
             headers: {
                 Authorization: "Bearer " + token
             }
@@ -211,7 +213,7 @@ async function deleteProduct(id){
 
     try{
 
-        const res = await fetch("/api/products/"+id,{
+        const res = await fetch(`${API_BASE}/products/${id}`,{
 
             method:"DELETE",
 
@@ -287,7 +289,7 @@ async function saveProduct() {
             const formData = new FormData();
             formData.append("image", imageFile);
 
-            const uploadRes = await fetch("/api/upload", {
+            const uploadRes = await fetch(`${API_BASE}/upload`, {
                 method: "POST",
                 body: formData
             });
@@ -317,9 +319,9 @@ async function saveProduct() {
             return;
         }
 
-        const url = editingId
-    ? "/api/products/" + editingId
-    : "/api/products";
+const url = editingId
+    ? `${API_BASE}/products/${editingId}`
+    : `${API_BASE}/products`;
 
 const method = editingId
     ? "PUT"
