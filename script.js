@@ -448,42 +448,95 @@ document.getElementById("checkoutForm").addEventListener("submit", async (e) => 
     e.preventDefault();
     const recipient_name = document.getElementById("checkoutName").value.trim();
     const recipient_email = document.getElementById("checkoutEmail").value.trim();
-    const payment_method = document.getElementById("checkoutPayment").value;
     const token = localStorage.getItem("nexshop_token");
+    const submitBtn = e.target.querySelector('button[type="submit"]');
 
     const total = cart.reduce((sum, item) => {
         const p = PRODUCTS.find(x => x.id === item.id);
         return sum + p.price * item.qty;
     }, 0);
 
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Memproses...";
+
     try {
+        // Backend creates the order AND the Midtrans transaction (server-side,
+        // using the Midtrans Server Key), then returns a snap_token here.
+        // ⚠️ Confirm the exact endpoint + response field names with your backend —
+        // adjust `data.snap_token` / `data.order_id` below if they differ.
         const res = await fetch(`${API_BASE}/orders`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ recipient_name, recipient_email, payment_method, items: cart, total })
+            body: JSON.stringify({ recipient_name, recipient_email, payment_method: "midtrans", items: cart, total })
         });
         const data = await res.json();
 
         if (!res.ok) {
             toast(data.message || "Gagal membuat pesanan", "error");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Bayar Sekarang";
             return;
         }
 
-        document.getElementById("checkoutSuccessMsg").textContent =
-            `Terima kasih, ${recipient_name}! Pesanan kamu senilai ${rupiah(total)} sedang diproses via ${payment_method.toUpperCase()}.`;
+        if (!data.snap_token) {
+            toast("Snap token tidak ditemukan dari server.", "error");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Bayar Sekarang";
+            return;
+        }
 
-        document.getElementById("checkoutStep").classList.add("hidden");
-        document.getElementById("checkoutSuccess").classList.remove("hidden");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Bayar Sekarang";
 
-        cart = [];
-        saveCart();
-        updateCartCount();
+        window.snap.pay(data.snap_token, {
+            onSuccess: function () {
+                showCheckoutSuccess(recipient_name, total, "berhasil");
+            },
+            onPending: function () {
+                showCheckoutSuccess(recipient_name, total, "menunggu pembayaran");
+            },
+            onError: function () {
+                toast("Pembayaran gagal. Silakan coba lagi.", "error");
+            },
+            onClose: function () {
+                toast("Kamu menutup jendela pembayaran sebelum selesai. Pesanan belum dibayar.");
+            }
+        });
     } catch (err) {
         toast("Gagal terhubung ke server.", "error");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Bayar Sekarang";
     }
+});
+
+function showCheckoutSuccess(recipient_name, total, statusText) {
+    document.getElementById("checkoutSuccessMsg").textContent =
+        `Terima kasih, ${recipient_name}! Pesanan kamu senilai ${rupiah(total)} ${statusText}. Kamu bisa cek status di "Pesanan Saya".`;
+
+    document.getElementById("checkoutStep").classList.add("hidden");
+    document.getElementById("checkoutSuccess").classList.remove("hidden");
+    openOverlay("checkoutOverlay");
+
+    cart = [];
+    saveCart();
+    updateCartCount();
+}
+
+/* ---------- Terms & Refund Policy modal ---------- */
+function openPolicy(tab) {
+    document.querySelectorAll(".policy-tab").forEach(t => {
+        t.classList.toggle("active", t.dataset.policyTab === tab);
+    });
+    document.getElementById("policyTerms").classList.toggle("hidden", tab !== "terms");
+    document.getElementById("policyRefund").classList.toggle("hidden", tab !== "refund");
+    openOverlay("policyOverlay");
+}
+
+document.querySelectorAll("[data-policy-tab]").forEach(btn => {
+    btn.addEventListener("click", () => openPolicy(btn.dataset.policyTab));
 });
 
 /* ---------- Mobile menu ---------- */

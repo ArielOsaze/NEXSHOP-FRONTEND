@@ -62,8 +62,61 @@
 <footer class="site-footer">
     <div class="footer-brand">Nex<span>Shop</span></div>
     <p>Marketplace gaming digital terpercaya. Transaksi aman, proses cepat.</p>
+
+    <div class="footer-contact">
+        <a href="https://wa.me/6287792634063" target="_blank" rel="noopener">
+            📱 WhatsApp Admin: 0877-9263-4063
+        </a>
+        <a href="mailto:nexshop.my.id@gmail.com">
+            ✉️ nexshop.my.id@gmail.com
+        </a>
+    </div>
+
+    <div class="footer-links">
+        <button type="button" class="footer-link-btn" data-policy-tab="terms">Syarat &amp; Ketentuan</button>
+        <span class="footer-link-sep">·</span>
+        <button type="button" class="footer-link-btn" data-policy-tab="refund">Kebijakan Refund</button>
+    </div>
+
     <p class="footer-copy">© 2026 NexShop. All rights reserved.</p>
 </footer>
+
+<!-- Terms & Refund Policy Modal -->
+<div class="overlay" id="policyOverlay">
+    <div class="modal policy-modal" role="dialog" aria-modal="true" aria-labelledby="policyTitle">
+        <button class="modal-close" data-close="policyOverlay" aria-label="Tutup">✕</button>
+        <div class="policy-tabs">
+            <button class="policy-tab active" data-policy-tab="terms">Syarat &amp; Ketentuan</button>
+            <button class="policy-tab" data-policy-tab="refund">Kebijakan Refund</button>
+        </div>
+
+        <div class="policy-panel" id="policyTerms">
+            <h3 id="policyTitle">Syarat &amp; Ketentuan</h3>
+            <ol class="policy-list">
+                <li>Dengan melakukan pemesanan di NexShop, kamu dianggap telah membaca dan menyetujui seluruh syarat &amp; ketentuan ini.</li>
+                <li>Seluruh transaksi diproses melalui payment gateway resmi <strong>Midtrans</strong> (QRIS, Virtual Account/Transfer Bank, E-Wallet, dan Kartu Kredit/Debit). NexShop tidak menerima pembayaran manual di luar sistem.</li>
+                <li>Pastikan data akun/email yang kamu daftarkan sudah benar. Pesanan akan diproses dan dikirim ke email yang terdaftar setelah pembayaran terverifikasi oleh Midtrans.</li>
+                <li>Waktu proses pesanan umumnya beberapa menit hingga maksimal 24 jam pada jam kerja, tergantung ketersediaan stok.</li>
+                <li>Produk yang dijual berupa akun/akses/kode digital. Dilarang keras memperjualbelikan kembali, membagikan, atau mengubah kredensial akun tanpa izin — pelanggaran membatalkan garansi.</li>
+                <li>NexShop berhak menolak atau membatalkan pesanan yang terindikasi penyalahgunaan, transaksi mencurigakan, atau melanggar kebijakan ini.</li>
+                <li>NexShop dapat memperbarui syarat &amp; ketentuan ini sewaktu-waktu; perubahan berlaku sejak dipublikasikan di halaman ini.</li>
+                <li>Untuk pertanyaan seputar transaksi, hubungi admin melalui WhatsApp atau email yang tercantum di footer.</li>
+            </ol>
+        </div>
+
+        <div class="policy-panel hidden" id="policyRefund">
+            <h3>Kebijakan Refund</h3>
+            <ol class="policy-list">
+                <li>Refund/pengembalian dana dapat diajukan apabila: pembayaran berhasil terpotong namun pesanan tidak diproses, produk yang diterima tidak sesuai deskripsi, atau akun/kode yang diberikan tidak valid/tidak bisa digunakan.</li>
+                <li>Pengajuan refund wajib disertai bukti pembayaran (order ID / bukti transaksi Midtrans) dan dilaporkan ke admin maksimal <strong>1x24 jam</strong> setelah pesanan diterima.</li>
+                <li>Refund <strong>tidak berlaku</strong> apabila akun/kode sudah digunakan, kredensial (email/password) sudah diubah oleh pembeli, atau pelanggaran terhadap Syarat &amp; Ketentuan (misalnya membagikan akun ke pihak lain).</li>
+                <li>Refund <strong>tidak berlaku</strong> untuk kesalahan input data dari pembeli (misalnya email tujuan salah) setelah pesanan berhasil diproses.</li>
+                <li>Dana yang disetujui untuk direfund akan dikembalikan ke metode pembayaran asal melalui sistem Midtrans, dengan estimasi proses 3–14 hari kerja tergantung kebijakan bank/e-wallet/penyedia pembayaran terkait.</li>
+                <li>Untuk mengajukan refund atau komplain, hubungi admin melalui WhatsApp <a href="https://wa.me/6287792634063" target="_blank" rel="noopener">0877-9263-4063</a> atau email <a href="mailto:nexshop.my.id@gmail.com">nexshop.my.id@gmail.com</a> dengan menyertakan Order ID.</li>
+            </ol>
+        </div>
+    </div>
+</div>
 
 <!-- Product Detail Modal -->
 <div class="overlay" id="productOverlay">
@@ -182,13 +235,10 @@
                 <label>Email
                     <input type="email" id="checkoutEmail" required placeholder="kamu@email.com">
                 </label>
-                <label>Metode Pembayaran
-                    <select id="checkoutPayment">
-                        <option value="qris">QRIS</option>
-                        <option value="bank">Transfer Bank</option>
-                        <option value="ewallet">E-Wallet</option>
-                    </select>
-                </label>
+                <div class="checkout-payment-note">
+                    <strong>💳 Pembayaran via Midtrans</strong>
+                    <p>Setelah klik "Bayar Sekarang", kamu akan memilih metode pembayaran (QRIS, Virtual Account/Transfer Bank, E-Wallet, atau Kartu Kredit/Debit) langsung di halaman pembayaran Midtrans yang aman.</p>
+                </div>
                 <div class="checkout-summary" id="checkoutSummary"></div>
                 <button type="submit" class="btn-primary">Bayar Sekarang</button>
             </form>
@@ -205,6 +255,15 @@
 <!-- Toast container -->
 <div class="toast-container" id="toastContainer"></div>
 
+<!--
+  MIDTRANS SNAP.JS
+  - Sandbox (testing): https://app.sandbox.midtrans.com/snap/snap.js
+  - Production (live): https://app.midtrans.com/snap/snap.js
+  Ganti data-client-key dengan Client Key asli dari Midtrans Dashboard
+  (Settings > Access Keys). Client Key BOLEH ada di frontend, Server Key
+  JANGAN PERNAH ditaruh di sini — itu cuma boleh dipakai di backend.
+-->
+<script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="SB-Mid-client-GANTI_DENGAN_CLIENT_KEY_ASLI"></script>
 <script src="script.js"></script>
 </body>
 </html>
