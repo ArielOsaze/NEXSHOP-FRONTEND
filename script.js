@@ -147,15 +147,16 @@ setTimeout(() => {
     });
 
     grid.querySelectorAll(".add-btn").forEach(btn => {
-            grid.style.opacity = 1;
-    grid.style.transform = "translateY(0)";
-
-},150);
         btn.addEventListener("click", (e) => {
             e.stopPropagation();
             addToCart(Number(btn.dataset.id), 1);
         });
     });
+
+    grid.style.opacity = 1;
+    grid.style.transform = "translateY(0)";
+
+}, 150);
 }
 
 /* ---------- Product detail modal ---------- */
@@ -208,6 +209,16 @@ function updateCartCount() {
 }
 
 function renderCart() {
+    // drop cart items whose product no longer exists (e.g. stale localStorage
+    // from an older catalog) so this can't silently crash before the drawer opens
+    const validIds = new Set(PRODUCTS.map(p => p.id));
+    const hadInvalid = cart.some(item => !validIds.has(item.id));
+    if (hadInvalid) {
+        cart = cart.filter(item => validIds.has(item.id));
+        saveCart();
+        updateCartCount();
+    }
+
     const container = document.getElementById("cartItems");
     if (cart.length === 0) {
         container.innerHTML = `<div class="cart-empty">Keranjang kamu masih kosong.<br>Yuk pilih game favoritmu!</div>`;
