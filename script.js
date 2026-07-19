@@ -13,13 +13,22 @@ const rupiah = (n) => "Rp" + n.toLocaleString("id-ID");
 const stars = (rating) => "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
 
 /* ---------- State (persisted) ---------- */
-let cart = JSON.parse(localStorage.getItem("nexshop_cart") || "[]");
 let currentUser = JSON.parse(localStorage.getItem("nexshop_user") || "null");
+
+// Cart disimpan per-akun (key beda tiap user_id), plus 1 key terpisah buat
+// guest (belum login). Jadi logout/ganti akun gak nyampur keranjang orang lain.
+const cartKey = () => currentUser ? `nexshop_cart_${currentUser.id}` : "nexshop_cart_guest";
+let cart = JSON.parse(localStorage.getItem(cartKey()) || "[]");
 let activeProductId = null;
 let pendingQty = 1;
 
-const saveCart = () => localStorage.setItem("nexshop_cart", JSON.stringify(cart));
+const saveCart = () => localStorage.setItem(cartKey(), JSON.stringify(cart));
 const saveUser = () => localStorage.setItem("nexshop_user", JSON.stringify(currentUser));
+
+function switchCartContext() {
+    cart = JSON.parse(localStorage.getItem(cartKey()) || "[]");
+    updateCartCount();
+}
 
 /* ---------- Toast ---------- */
 function toast(message, type = "default") {
@@ -450,6 +459,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
         localStorage.setItem("nexshop_token", data.token);
         currentUser = data.user;
         saveUser();
+        switchCartContext();
         refreshAccountUI();
         closeOverlay("authOverlay");
         toast(`Berhasil masuk. Selamat datang kembali, ${data.user.fullname}!`, "success");
@@ -463,6 +473,12 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
     currentUser = null;
     saveUser();
     localStorage.removeItem("nexshop_token");
+
+    // logout selalu nampilin keranjang kosong (bukan nyisa punya guest sebelumnya)
+    cart = [];
+    saveCart();
+    updateCartCount();
+
     refreshAccountUI();
     accountDropdown.classList.remove("active");
     toast("Kamu berhasil keluar.");
@@ -637,7 +653,26 @@ navMenu.querySelectorAll("a").forEach(link => {
     link.addEventListener("click", () => navMenu.classList.remove("active"));
 });
 
+/* ---------- Promo hero banner ---------- */
+async function loadPromo() {
+    try {
+        const res = await fetch(`${API_BASE}/promo`);
+        if (!res.ok) return; // biarin teks default di HTML kalau gagal/promo belum diset
+        const promo = await res.json();
+        if (!promo) return;
+
+        if (promo.badge_text) document.getElementById("heroBadge").textContent = promo.badge_text;
+        if (promo.title) document.getElementById("heroTitle").textContent = promo.title;
+        if (promo.description) document.getElementById("heroDesc").textContent = promo.description;
+        if (promo.cta_text) document.getElementById("heroCta").textContent = promo.cta_text;
+        if (promo.cta_link) document.getElementById("heroCta").href = promo.cta_link;
+    } catch (err) {
+        // diem aja, biarin fallback teks default di HTML
+    }
+}
+
 /* ---------- Init ---------- */
 loadProducts();
+loadPromo();
 updateCartCount();
 refreshAccountUI();
