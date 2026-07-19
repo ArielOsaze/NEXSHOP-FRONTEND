@@ -979,6 +979,28 @@ header{
 .checkout-payment-note strong{ display: block; margin-bottom: 4px; font-size: 13.5px; }
 .checkout-payment-note p{ margin: 0; color: var(--text-muted); line-height: 1.5; }
 
+.checkout-guest-note{
+    background: rgba(124,58,237,.08);
+    border: 1px solid rgba(124,58,237,.3);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+}
+
+.checkout-guest-note strong{ display: block; margin-bottom: 4px; font-size: 13.5px; }
+.checkout-guest-note p{ margin: 0; color: var(--text-muted); line-height: 1.5; }
+.checkout-guest-note button{
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent-b);
+    font-weight: 700;
+    text-decoration: underline;
+    font-size: 13px;
+    display: inline;
+}
+
 /* ===== Policy Modal (S&K / Refund) ===== */
 .policy-modal{ max-width: 560px; }
 

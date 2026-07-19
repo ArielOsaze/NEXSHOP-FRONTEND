@@ -494,17 +494,16 @@ document.getElementById("checkoutBtn").addEventListener("click", () => {
         toast("Keranjang masih kosong.", "error");
         return;
     }
-    if (!currentUser) {
-        toast("Silakan login dulu untuk checkout.", "error");
-        closeOverlay("cartOverlay");
-        openOverlay("authOverlay");
-        return;
-    }
     closeOverlay("cartOverlay");
+
+    document.getElementById("checkoutGuestNote").classList.toggle("hidden", !!currentUser);
 
     if (currentUser) {
         document.getElementById("checkoutName").value = currentUser.fullname;
         document.getElementById("checkoutEmail").value = currentUser.email;
+    } else {
+        document.getElementById("checkoutName").value = "";
+        document.getElementById("checkoutEmail").value = "";
     }
 
     const total = cart.reduce((sum, item) => {
@@ -521,6 +520,11 @@ document.getElementById("checkoutBtn").addEventListener("click", () => {
     document.getElementById("checkoutStep").classList.remove("hidden");
     document.getElementById("checkoutSuccess").classList.add("hidden");
     openOverlay("checkoutOverlay");
+});
+
+document.getElementById("checkoutLoginLink").addEventListener("click", () => {
+    closeOverlay("checkoutOverlay");
+    openOverlay("authOverlay");
 });
 
 document.getElementById("checkoutForm").addEventListener("submit", async (e) => {
@@ -542,13 +546,13 @@ document.getElementById("checkoutForm").addEventListener("submit", async (e) => 
         // Backend creates the order AND the Midtrans transaction (server-side,
         // using the Midtrans Server Key), then returns a snap_token here.
         // ⚠️ Confirm the exact endpoint + response field names with your backend —
-        // adjust `data.snap_token` / `data.order_id` below if they differ.
+        // adjust `data.snap_token` / `data.orderId` below if they differ.
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
         const res = await fetch(`${API_BASE}/orders`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
+            headers,
             body: JSON.stringify({ recipient_name, recipient_email, payment_method: "midtrans", items: cart, total })
         });
         const data = await res.json();
@@ -572,10 +576,10 @@ document.getElementById("checkoutForm").addEventListener("submit", async (e) => 
 
         window.snap.pay(data.snap_token, {
             onSuccess: function () {
-                showCheckoutSuccess(recipient_name, total, "berhasil");
+                showCheckoutSuccess(recipient_name, total, "berhasil", data.orderId);
             },
             onPending: function () {
-                showCheckoutSuccess(recipient_name, total, "menunggu pembayaran");
+                showCheckoutSuccess(recipient_name, total, "menunggu pembayaran", data.orderId);
             },
             onError: function () {
                 toast("Pembayaran gagal. Silakan coba lagi.", "error");
@@ -591,9 +595,13 @@ document.getElementById("checkoutForm").addEventListener("submit", async (e) => 
     }
 });
 
-function showCheckoutSuccess(recipient_name, total, statusText) {
-    document.getElementById("checkoutSuccessMsg").textContent =
-        `Terima kasih, ${recipient_name}! Pesanan kamu senilai ${rupiah(total)} ${statusText}. Kamu bisa cek status di "Pesanan Saya".`;
+function showCheckoutSuccess(recipient_name, total, statusText, orderId) {
+    const trackingNote = currentUser
+        ? `Kamu bisa cek status di "Pesanan Saya".`
+        : `⚠️ Kamu checkout tanpa akun — catat Order ID ini baik-baik, karena tidak tersimpan di riwayat manapun: <strong>${orderId}</strong>`;
+
+    document.getElementById("checkoutSuccessMsg").innerHTML =
+        `Terima kasih, ${recipient_name}! Pesanan kamu senilai ${rupiah(total)} ${statusText}. ${trackingNote}`;
 
     document.getElementById("checkoutStep").classList.add("hidden");
     document.getElementById("checkoutSuccess").classList.remove("hidden");
