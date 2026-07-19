@@ -21,6 +21,7 @@
         <li class="nav-item"><a class="nav-link text-white" href="#" data-view="dashboard"><i class="bi bi-box me-2"></i>Products</a></li>
         <li class="nav-item"><a class="nav-link text-white" href="#" data-view="orders"><i class="bi bi-cart me-2"></i>Orders</a></li>
         <li class="nav-item"><a class="nav-link text-white" href="#" data-view="users"><i class="bi bi-people me-2"></i>Users</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#" data-view="promo"><i class="bi bi-megaphone me-2"></i>Promo</a></li>
         <li class="nav-item"><a class="nav-link text-white" href="#" data-view="settings"><i class="bi bi-gear me-2"></i>Settings</a></li>
     </ul>
 
@@ -120,6 +121,46 @@
     </div>
     <div class="card shadow-sm">
         <div class="card-body" id="usersContainer"></div>
+    </div>
+</section>
+
+<!-- ===== Promo view ===== -->
+<section id="view-promo" class="view-section d-none">
+    <div class="mb-4">
+        <h2>Promo Banner</h2>
+        <p class="text-muted mb-0">Atur isi banner promo di halaman utama toko (hero section)</p>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form id="promoForm">
+                <div class="mb-3">
+                    <label class="form-label">Badge (teks kecil di atas judul)</label>
+                    <input id="promoBadge" class="form-control" placeholder="🔥 Promo Minggu Ini">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Judul</label>
+                    <input id="promoTitle" class="form-control" placeholder="Stok Terbatas, Harga Bersahabat">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Deskripsi</label>
+                    <textarea id="promoDesc" rows="3" class="form-control" style="resize:vertical;" placeholder="Game key & akses premium mulai dari Rp29.000..."></textarea>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Teks Tombol</label>
+                        <input id="promoCtaText" class="form-control" placeholder="Jelajahi Katalog">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Link Tombol</label>
+                        <input id="promoCtaLink" class="form-control" placeholder="#games">
+                    </div>
+                </div>
+                <p class="text-danger small mb-3" id="promoError"></p>
+                <button type="submit" class="btn btn-success" id="savePromoBtn">
+                    <i class="bi bi-floppy"></i> Simpan Promo
+                </button>
+            </form>
+        </div>
     </div>
 </section>
 

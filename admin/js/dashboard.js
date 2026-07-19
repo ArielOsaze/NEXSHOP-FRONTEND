@@ -14,6 +14,7 @@ let editingId = null;
 let currentImage = "";
 let ordersLoaded = false;
 let usersLoaded = false;
+let promoLoaded = false;
 
 const productModalEl = document.getElementById("productModal");
 const productModal = new bootstrap.Modal(productModalEl);
@@ -75,6 +76,7 @@ document.querySelectorAll("#sidebarNav .nav-link").forEach(link => {
 
         if (view === "orders" && !ordersLoaded) loadOrders();
         if (view === "users" && !usersLoaded) loadUsers();
+        if (view === "promo" && !promoLoaded) loadPromo();
     });
 });
 
@@ -442,6 +444,74 @@ async function loadUsers() {
         `;
     }
 }
+
+// ================================
+// Promo banner
+// ================================
+
+async function loadPromo() {
+    const errorEl = document.getElementById("promoError");
+    errorEl.textContent = "";
+
+    try {
+        const res = await apiFetch("/promo");
+        if (!res.ok) throw new Error("Gagal mengambil data promo");
+
+        const promo = await res.json();
+        promoLoaded = true;
+
+        document.getElementById("promoBadge").value = promo.badge_text || "";
+        document.getElementById("promoTitle").value = promo.title || "";
+        document.getElementById("promoDesc").value = promo.description || "";
+        document.getElementById("promoCtaText").value = promo.cta_text || "";
+        document.getElementById("promoCtaLink").value = promo.cta_link || "";
+
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        console.error(err);
+        errorEl.textContent = err.message;
+    }
+}
+
+document.getElementById("promoForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const errorEl = document.getElementById("promoError");
+    const saveBtn = document.getElementById("savePromoBtn");
+    const originalHtml = saveBtn.innerHTML;
+
+    errorEl.textContent = "";
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...`;
+
+    try {
+        const res = await apiFetch("/promo", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                badge_text: document.getElementById("promoBadge").value.trim(),
+                title: document.getElementById("promoTitle").value.trim(),
+                description: document.getElementById("promoDesc").value.trim(),
+                cta_text: document.getElementById("promoCtaText").value.trim(),
+                cta_link: document.getElementById("promoCtaLink").value.trim()
+            })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal menyimpan promo");
+
+        showToast("Promo berhasil disimpan");
+
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        console.error(err);
+        errorEl.textContent = err.message;
+        showToast(err.message, true);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalHtml;
+    }
+});
 
 // ================================
 // Logout
