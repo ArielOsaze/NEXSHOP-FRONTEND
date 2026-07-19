@@ -173,19 +173,33 @@ header{
 }
 
 /* ===== Hero ===== */
-.hero{
+.hero-carousel{
     position: relative;
     width: 100%;
     aspect-ratio: 1600/600;
     min-height: 280px;
-    background: url("images/nexshop-hero-banner.svg") center/cover no-repeat;
     overflow: hidden;
-    display: flex;
-    align-items: flex-end;
     margin-top: 96px;
+    background: #0b0b18;
 }
 
-.hero::before{
+.hero-track{
+    display: flex;
+    height: 100%;
+    transition: transform .5s ease;
+}
+
+.hero-slide{
+    position: relative;
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    background: url("images/nexshop-hero-banner.svg") center/cover no-repeat;
+    display: flex;
+    align-items: flex-end;
+}
+
+.hero-slide::before{
     content: "";
     position: absolute;
     inset: 0;
@@ -212,14 +226,14 @@ header{
     letter-spacing: .3px;
 }
 
-.hero h2{
+.hero-slide h2{
     font-family: var(--font-display);
     font-size: 32px;
     line-height: 1.15;
     margin: 0 0 10px;
 }
 
-.hero p{
+.hero-slide p{
     font-size: 14px;
     color: var(--text-muted);
     margin: 0 0 20px;
@@ -241,6 +255,57 @@ header{
 .hero-cta:hover{
     transform: scale(1.04);
     box-shadow: var(--shadow-glow);
+}
+
+.hero-arrow{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,.4);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .2s;
+}
+
+.hero-arrow:hover{ background: rgba(0,0,0,.65); }
+.hero-arrow-left{ left: 16px; }
+.hero-arrow-right{ right: 16px; }
+
+.hero-dots{
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: flex;
+    gap: 8px;
+}
+
+.hero-dot{
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,.4);
+    cursor: pointer;
+    transition: .2s;
+}
+
+.hero-dot.active{
+    background: #fff;
+    width: 22px;
+    border-radius: 4px;
 }
 
 /* ===== Games / Catalog ===== */
@@ -1065,8 +1130,8 @@ header{
         order: 3;
     }
     .menu.active{ display: flex; }
-    .hero{ margin-top: 84px; }
-    .hero h2{ font-size: 24px; }
+    .hero-carousel{ margin-top: 84px; }
+    .hero-slide h2{ font-size: 24px; }
     .games{ padding: 0 20px; }
     .account-dropdown{ right: 20px; }
 }

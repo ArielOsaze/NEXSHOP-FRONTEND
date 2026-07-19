@@ -653,23 +653,95 @@ navMenu.querySelectorAll("a").forEach(link => {
     link.addEventListener("click", () => navMenu.classList.remove("active"));
 });
 
-/* ---------- Promo hero banner ---------- */
+/* ---------- Promo/berita carousel ---------- */
+let heroSlides = [];
+let heroIndex = 0;
+let heroTimer = null;
+
 async function loadPromo() {
     try {
         const res = await fetch(`${API_BASE}/promo`);
-        if (!res.ok) return; // biarin teks default di HTML kalau gagal/promo belum diset
-        const promo = await res.json();
-        if (!promo) return;
+        if (!res.ok) return;
+        const slides = await res.json();
+        if (!Array.isArray(slides) || slides.length === 0) return;
 
-        if (promo.badge_text) document.getElementById("heroBadge").textContent = promo.badge_text;
-        if (promo.title) document.getElementById("heroTitle").textContent = promo.title;
-        if (promo.description) document.getElementById("heroDesc").textContent = promo.description;
-        if (promo.cta_text) document.getElementById("heroCta").textContent = promo.cta_text;
-        if (promo.cta_link) document.getElementById("heroCta").href = promo.cta_link;
+        heroSlides = slides;
+        renderHeroSlides();
+        startHeroAutoplay();
     } catch (err) {
-        // diem aja, biarin fallback teks default di HTML
+        // diem aja, biarin section hero kosong kalau API gagal
     }
 }
+
+function renderHeroSlides() {
+    const track = document.getElementById("heroTrack");
+    const dotsWrap = document.getElementById("heroDots");
+
+    track.innerHTML = heroSlides.map(s => `
+        <div class="hero-slide" style="${s.image_url ? `background-image:url('${s.image_url}')` : ""}">
+            <div class="hero-text">
+                ${s.badge_text ? `<span class="hero-badge">${escapeHtml(s.badge_text)}</span>` : ""}
+                <h2>${escapeHtml(s.title || "")}</h2>
+                ${s.description ? `<p>${escapeHtml(s.description)}</p>` : ""}
+                ${s.cta_text ? `<a href="${s.cta_link || "#"}" class="hero-cta">${escapeHtml(s.cta_text)}</a>` : ""}
+            </div>
+        </div>
+    `).join("");
+
+    dotsWrap.innerHTML = heroSlides.map((_, i) =>
+        `<button class="hero-dot${i === 0 ? " active" : ""}" data-index="${i}" aria-label="Slide ${i + 1}"></button>`
+    ).join("");
+
+    dotsWrap.querySelectorAll(".hero-dot").forEach(dot => {
+        dot.addEventListener("click", () => {
+            goToHeroSlide(Number(dot.dataset.index));
+            resetHeroAutoplay();
+        });
+    });
+
+    heroIndex = 0;
+    goToHeroSlide(0);
+
+    // sembunyiin panah/dots kalau cuma 1 slide, gak ada gunanya
+    const onlyOne = heroSlides.length <= 1;
+    document.getElementById("heroPrev").classList.toggle("hidden", onlyOne);
+    document.getElementById("heroNext").classList.toggle("hidden", onlyOne);
+    dotsWrap.classList.toggle("hidden", onlyOne);
+}
+
+function escapeHtml(str) {
+    return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+}
+
+function goToHeroSlide(index) {
+    heroIndex = (index + heroSlides.length) % heroSlides.length;
+    document.getElementById("heroTrack").style.transform = `translateX(-${heroIndex * 100}%)`;
+    document.querySelectorAll(".hero-dot").forEach((dot, i) => {
+        dot.classList.toggle("active", i === heroIndex);
+    });
+}
+
+function startHeroAutoplay() {
+    if (heroSlides.length <= 1) return;
+    clearInterval(heroTimer);
+    heroTimer = setInterval(() => goToHeroSlide(heroIndex + 1), 5000);
+}
+
+function resetHeroAutoplay() {
+    clearInterval(heroTimer);
+    startHeroAutoplay();
+}
+
+document.getElementById("heroPrev").addEventListener("click", () => {
+    goToHeroSlide(heroIndex - 1);
+    resetHeroAutoplay();
+});
+document.getElementById("heroNext").addEventListener("click", () => {
+    goToHeroSlide(heroIndex + 1);
+    resetHeroAutoplay();
+});
 
 /* ---------- Init ---------- */
 loadProducts();

@@ -126,40 +126,32 @@
 
 <!-- ===== Promo view ===== -->
 <section id="view-promo" class="view-section d-none">
-    <div class="mb-4">
-        <h2>Promo Banner</h2>
-        <p class="text-muted mb-0">Atur isi banner promo di halaman utama toko (hero section)</p>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2>Promo / Iklan / Berita</h2>
+            <p class="text-muted mb-0">Slide-slide ini tampil bergantian (geser otomatis) di halaman utama toko</p>
+        </div>
+        <button class="btn btn-success text-nowrap" onclick="openPromoModal()">
+            <i class="bi bi-plus-circle"></i> Tambah Slide
+        </button>
     </div>
+
     <div class="card shadow-sm">
-        <div class="card-body">
-            <form id="promoForm">
-                <div class="mb-3">
-                    <label class="form-label">Badge (teks kecil di atas judul)</label>
-                    <input id="promoBadge" class="form-control" placeholder="🔥 Promo Minggu Ini">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Judul</label>
-                    <input id="promoTitle" class="form-control" placeholder="Stok Terbatas, Harga Bersahabat">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Deskripsi</label>
-                    <textarea id="promoDesc" rows="3" class="form-control" style="resize:vertical;" placeholder="Game key & akses premium mulai dari Rp29.000..."></textarea>
-                </div>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Teks Tombol</label>
-                        <input id="promoCtaText" class="form-control" placeholder="Jelajahi Katalog">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Link Tombol</label>
-                        <input id="promoCtaLink" class="form-control" placeholder="#games">
-                    </div>
-                </div>
-                <p class="text-danger small mb-3" id="promoError"></p>
-                <button type="submit" class="btn btn-success" id="savePromoBtn">
-                    <i class="bi bi-floppy"></i> Simpan Promo
-                </button>
-            </form>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>Urutan</th>
+                    <th>Tipe</th>
+                    <th>Judul</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+                </thead>
+                <tbody id="promoSlides">
+                    <tr><td colspan="5" class="text-center text-muted py-4">Memuat data...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </section>
@@ -180,6 +172,77 @@
 </section>
 
 </main>
+</div>
+
+<!-- Promo Slide Modal -->
+<div class="modal fade" id="promoModal" tabindex="-1">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+
+    <div class="modal-header">
+        <h5 class="modal-title" id="promoModalTitle"><i class="bi bi-megaphone me-2"></i>Tambah Slide</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+
+    <div class="modal-body">
+        <form id="promoForm">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Tipe</label>
+                    <select id="promoType" class="form-control">
+                        <option value="promo">Promo</option>
+                        <option value="iklan">Iklan</option>
+                        <option value="berita">Berita</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Urutan Tampil</label>
+                    <input id="promoSortOrder" type="number" min="0" class="form-control" placeholder="0">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Badge (teks kecil di atas judul)</label>
+                    <input id="promoBadge" class="form-control" placeholder="🔥 Promo Minggu Ini">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Judul</label>
+                    <input id="promoTitle" class="form-control" required placeholder="Stok Terbatas, Harga Bersahabat">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Deskripsi</label>
+                    <textarea id="promoDesc" rows="3" class="form-control" style="resize:vertical;" placeholder="Game key & akses premium mulai dari Rp29.000..."></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Teks Tombol</label>
+                    <input id="promoCtaText" class="form-control" placeholder="Jelajahi Katalog">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Link Tombol</label>
+                    <input id="promoCtaLink" class="form-control" placeholder="#games">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">URL Gambar Background (opsional)</label>
+                    <input id="promoImageUrl" class="form-control" placeholder="https://...">
+                </div>
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="promoIsActive" checked>
+                        <label class="form-check-label" for="promoIsActive">Aktif (tampil di toko)</label>
+                    </div>
+                </div>
+            </div>
+            <p class="text-danger small mt-3 mb-0" id="promoError"></p>
+        </form>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-success" id="savePromoBtn" onclick="savePromo()">
+            <i class="bi bi-floppy"></i> Simpan Slide
+        </button>
+    </div>
+
+</div>
+</div>
 </div>
 
 <!-- Product Modal -->

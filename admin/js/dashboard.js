@@ -21,6 +21,10 @@ const productModal = new bootstrap.Modal(productModalEl);
 const previewImage = document.getElementById("previewImage");
 const imageInput = document.getElementById("image");
 
+const promoModalEl = document.getElementById("promoModal");
+const promoModal = new bootstrap.Modal(promoModalEl);
+let editingPromoId = null;
+
 // ================================
 // Helpers
 // ================================
@@ -419,14 +423,31 @@ async function loadUsers() {
         container.innerHTML = `
             <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead><tr><th>ID</th><th>Nama</th><th>Email</th><th>Role</th></tr></thead>
+                <thead><tr><th>ID</th><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>
                 <tbody>
                     ${users.map(u => `
                         <tr>
                             <td>${escapeHtml(u.id)}</td>
                             <td>${escapeHtml(u.name || "-")}</td>
                             <td>${escapeHtml(u.email || "-")}</td>
-                            <td><span class="badge bg-secondary">${escapeHtml(u.role || "user")}</span></td>
+                            <td>
+                                <select class="form-select form-select-sm" style="width:110px;" onchange="changeUserRole(${Number(u.id)}, this.value)">
+                                    <option value="user" ${u.role === "user" ? "selected" : ""}>user</option>
+                                    <option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option>
+                                </select>
+                            </td>
+                            <td>
+                                ${u.is_blacklisted
+                                    ? `<span class="badge bg-danger">Diblokir</span>`
+                                    : `<span class="badge bg-success">Aktif</span>`}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm ${u.is_blacklisted ? "btn-success" : "btn-outline-danger"}"
+                                        onclick="toggleUserBlacklist(${Number(u.id)}, ${!u.is_blacklisted})">
+                                    <i class="bi ${u.is_blacklisted ? "bi-unlock" : "bi-slash-circle"}"></i>
+                                    ${u.is_blacklisted ? "Buka Blokir" : "Blokir"}
+                                </button>
+                            </td>
                         </tr>
                     `).join("")}
                 </tbody>
@@ -445,73 +466,203 @@ async function loadUsers() {
     }
 }
 
-// ================================
-// Promo banner
-// ================================
-
-async function loadPromo() {
-    const errorEl = document.getElementById("promoError");
-    errorEl.textContent = "";
-
+async function changeUserRole(id, role) {
     try {
-        const res = await apiFetch("/promo");
-        if (!res.ok) throw new Error("Gagal mengambil data promo");
+        const res = await apiFetch(`/users/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ role })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal mengubah role");
 
-        const promo = await res.json();
-        promoLoaded = true;
-
-        document.getElementById("promoBadge").value = promo.badge_text || "";
-        document.getElementById("promoTitle").value = promo.title || "";
-        document.getElementById("promoDesc").value = promo.description || "";
-        document.getElementById("promoCtaText").value = promo.cta_text || "";
-        document.getElementById("promoCtaLink").value = promo.cta_link || "";
-
+        showToast(`Role berhasil diubah jadi "${role}"`);
     } catch (err) {
         if (err.message === "unauthorized") return;
         console.error(err);
-        errorEl.textContent = err.message;
+        showToast(err.message, true);
+        loadUsers(); // refresh biar dropdown balik ke nilai asli kalau gagal
     }
 }
 
-document.getElementById("promoForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+async function toggleUserBlacklist(id, newValue) {
+    const confirmMsg = newValue
+        ? "Blokir akun ini? User gak akan bisa login sampai dibuka blokirnya lagi."
+        : "Buka blokir akun ini?";
+    if (!confirm(confirmMsg)) return;
 
+    try {
+        const res = await apiFetch(`/users/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_blacklisted: newValue })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal mengubah status user");
+
+        showToast(newValue ? "Akun berhasil diblokir" : "Blokir berhasil dibuka");
+        loadUsers();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        console.error(err);
+        showToast(err.message, true);
+    }
+}
+
+// ================================
+// Promo / Iklan / Berita (carousel slides)
+// ================================
+
+let promoSlides = [];
+
+async function loadPromo() {
+    const tbody = document.getElementById("promoSlides");
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data...</td></tr>`;
+
+    try {
+        const res = await apiFetch("/promo/all");
+        if (!res.ok) throw new Error("Gagal mengambil data promo");
+
+        promoSlides = await res.json();
+        promoLoaded = true;
+        renderPromoSlides();
+
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${escapeHtml(err.message)}</td></tr>`;
+    }
+}
+
+function renderPromoSlides() {
+    const tbody = document.getElementById("promoSlides");
+
+    if (!promoSlides.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Belum ada slide. Klik "Tambah Slide" buat mulai.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = promoSlides.map(slide => `
+        <tr>
+            <td>${escapeHtml(slide.sort_order ?? 0)}</td>
+            <td><span class="badge bg-secondary text-capitalize">${escapeHtml(slide.type || "promo")}</span></td>
+            <td><strong>${escapeHtml(slide.title)}</strong></td>
+            <td>
+                ${slide.is_active
+                    ? `<span class="badge bg-success">Aktif</span>`
+                    : `<span class="badge bg-secondary">Nonaktif</span>`}
+            </td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editPromoSlide(${Number(slide.id)})">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deletePromoSlide(${Number(slide.id)})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function openPromoModal() {
+    editingPromoId = null;
+    document.getElementById("promoForm").reset();
+    document.getElementById("promoIsActive").checked = true;
+    document.getElementById("promoModalTitle").innerHTML = '<i class="bi bi-megaphone me-2"></i>Tambah Slide';
+    document.getElementById("promoError").textContent = "";
+    promoModal.show();
+}
+
+function editPromoSlide(id) {
+    const slide = promoSlides.find(s => s.id === id);
+    if (!slide) return;
+
+    editingPromoId = id;
+    document.getElementById("promoModalTitle").innerHTML = '<i class="bi bi-megaphone me-2"></i>Edit Slide';
+    document.getElementById("promoType").value = slide.type || "promo";
+    document.getElementById("promoSortOrder").value = slide.sort_order ?? 0;
+    document.getElementById("promoBadge").value = slide.badge_text || "";
+    document.getElementById("promoTitle").value = slide.title || "";
+    document.getElementById("promoDesc").value = slide.description || "";
+    document.getElementById("promoCtaText").value = slide.cta_text || "";
+    document.getElementById("promoCtaLink").value = slide.cta_link || "";
+    document.getElementById("promoImageUrl").value = slide.image_url || "";
+    document.getElementById("promoIsActive").checked = !!slide.is_active;
+    document.getElementById("promoError").textContent = "";
+    promoModal.show();
+}
+
+async function savePromo() {
+    const title = document.getElementById("promoTitle").value.trim();
     const errorEl = document.getElementById("promoError");
+
+    if (!title) {
+        errorEl.textContent = "Judul wajib diisi";
+        return;
+    }
+
     const saveBtn = document.getElementById("savePromoBtn");
     const originalHtml = saveBtn.innerHTML;
-
-    errorEl.textContent = "";
     saveBtn.disabled = true;
     saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...`;
 
+    const payload = {
+        type: document.getElementById("promoType").value,
+        sort_order: Number(document.getElementById("promoSortOrder").value || 0),
+        badge_text: document.getElementById("promoBadge").value.trim(),
+        title,
+        description: document.getElementById("promoDesc").value.trim(),
+        cta_text: document.getElementById("promoCtaText").value.trim(),
+        cta_link: document.getElementById("promoCtaLink").value.trim(),
+        image_url: document.getElementById("promoImageUrl").value.trim(),
+        is_active: document.getElementById("promoIsActive").checked
+    };
+
     try {
-        const res = await apiFetch("/promo", {
-            method: "PUT",
+        const url = editingPromoId ? `/promo/${editingPromoId}` : "/promo";
+        const method = editingPromoId ? "PUT" : "POST";
+
+        const res = await apiFetch(url, {
+            method,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                badge_text: document.getElementById("promoBadge").value.trim(),
-                title: document.getElementById("promoTitle").value.trim(),
-                description: document.getElementById("promoDesc").value.trim(),
-                cta_text: document.getElementById("promoCtaText").value.trim(),
-                cta_link: document.getElementById("promoCtaLink").value.trim()
-            })
+            body: JSON.stringify(payload)
         });
 
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || "Gagal menyimpan promo");
+        if (!res.ok) throw new Error(data.message || "Gagal menyimpan slide");
 
-        showToast("Promo berhasil disimpan");
+        promoModal.hide();
+        loadPromo();
+        showToast("Slide berhasil disimpan");
 
     } catch (err) {
         if (err.message === "unauthorized") return;
         console.error(err);
         errorEl.textContent = err.message;
-        showToast(err.message, true);
     } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalHtml;
     }
-});
+}
+
+async function deletePromoSlide(id) {
+    if (!confirm("Hapus slide ini?")) return;
+
+    try {
+        const res = await apiFetch(`/promo/${id}`, { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) throw new Error(data.message || "Gagal menghapus slide");
+
+        showToast(data.message || "Slide berhasil dihapus");
+        loadPromo();
+
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        console.error(err);
+        showToast(err.message, true);
+    }
+}
 
 // ================================
 // Logout
