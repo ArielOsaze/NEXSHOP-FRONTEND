@@ -319,6 +319,7 @@ document.querySelectorAll(".auth-tab").forEach(tab => {
         const isLogin = tab.dataset.tab === "login";
         document.getElementById("loginForm").classList.toggle("hidden", !isLogin);
         document.getElementById("registerForm").classList.toggle("hidden", isLogin);
+        document.getElementById("otpForm").classList.add("hidden");
     });
 });
 
@@ -342,11 +343,83 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
             return;
         }
         errorEl.textContent = "";
-        toast(`Akun berhasil dibuat. Silakan masuk, ${fullname}!`, "success");
-        document.querySelector('[data-tab="login"]').click();
         e.target.reset();
+        showOtpForm(email);
+        toast("Cek email kamu untuk kode verifikasi.", "success");
     } catch (err) {
         errorEl.textContent = "Gagal terhubung ke server.";
+    }
+});
+
+function showOtpForm(email) {
+    document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+    document.getElementById("loginForm").classList.add("hidden");
+    document.getElementById("registerForm").classList.add("hidden");
+    document.getElementById("otpForm").classList.remove("hidden");
+    document.getElementById("otpEmail").value = email;
+    document.getElementById("otpEmailLabel").textContent = email;
+    document.getElementById("otpError").textContent = "";
+    openOverlay("authOverlay");
+}
+
+document.getElementById("otpForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("otpEmail").value;
+    const otp = document.getElementById("otpCode").value.trim();
+    const errorEl = document.getElementById("otpError");
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, otp })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            errorEl.textContent = data.message;
+            return;
+        }
+
+        errorEl.textContent = "";
+        e.target.reset();
+        document.getElementById("otpForm").classList.add("hidden");
+        document.querySelector('[data-tab="login"]').classList.add("active");
+        document.getElementById("loginForm").classList.remove("hidden");
+        document.getElementById("loginEmail").value = email;
+        toast("Verifikasi berhasil! Silakan masuk.", "success");
+    } catch (err) {
+        errorEl.textContent = "Gagal terhubung ke server.";
+    }
+});
+
+document.getElementById("otpResendBtn").addEventListener("click", async () => {
+    const email = document.getElementById("otpEmail").value;
+    const errorEl = document.getElementById("otpError");
+    const btn = document.getElementById("otpResendBtn");
+
+    btn.disabled = true;
+    btn.textContent = "Mengirim...";
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/resend-otp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            errorEl.textContent = data.message;
+        } else {
+            errorEl.textContent = "";
+            toast("Kode baru sudah dikirim.", "success");
+        }
+    } catch (err) {
+        errorEl.textContent = "Gagal terhubung ke server.";
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Kirim ulang kode";
     }
 });
 
@@ -365,6 +438,12 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
         const data = await res.json();
 
         if (!res.ok) {
+            if (data.needsVerification) {
+                errorEl.textContent = "";
+                showOtpForm(data.email || email);
+                toast("Email belum diverifikasi. Cek kode OTP kamu.");
+                return;
+            }
             errorEl.textContent = data.message;
             return;
         }

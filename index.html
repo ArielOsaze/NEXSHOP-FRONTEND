@@ -206,6 +206,18 @@
             <p class="auth-error" id="regError"></p>
             <button type="submit" class="btn-primary">Daftar</button>
         </form>
+
+        <form id="otpForm" class="auth-form hidden">
+            <h3>Verifikasi Email</h3>
+            <p class="otp-info">Kode 6 digit sudah dikirim ke <strong id="otpEmailLabel"></strong>. Cek juga folder Spam kalau belum masuk.</p>
+            <input type="hidden" id="otpEmail">
+            <label>Kode OTP
+                <input type="text" id="otpCode" required maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="6 digit kode">
+            </label>
+            <p class="auth-error" id="otpError"></p>
+            <button type="submit" class="btn-primary">Verifikasi</button>
+            <button type="button" class="otp-resend" id="otpResendBtn">Kirim ulang kode</button>
+        </form>
     </div>
 </div>
 

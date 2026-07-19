@@ -690,6 +690,26 @@ header{
     font-size: 18px;
 }
 
+.otp-info{
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0 0 16px;
+}
+
+.otp-resend{
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--accent-b);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 12px;
+    padding: 6px;
+}
+
 .auth-form label{
     display: block;
     font-size: 13px;
@@ -1036,11 +1056,15 @@ header{
 .category-filter{
     display:flex;
     gap:14px;
-    margin:26px 0 34px;
+    margin:12px 0 20px;
     overflow-x:auto;
     scrollbar-width:none;
     scroll-behavior:smooth;
-    padding-bottom:6px;
+    /* overflow-x:auto forces overflow-y to clip too (per CSS spec), and the
+       active chip's glow (box-shadow) + hover lift (translateY) extend beyond
+       its own box — so we pad the scroll container itself to give the glow
+       room instead of getting cut off at the container's edge */
+    padding:22px 4px 34px;
 }
 
 .category-filter::-webkit-scrollbar{
