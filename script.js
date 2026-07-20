@@ -743,8 +743,192 @@ document.getElementById("heroNext").addEventListener("click", () => {
     resetHeroAutoplay();
 });
 
+/* ---------- Store settings (nama toko, logo, kontak) ---------- */
+async function loadStoreSettings() {
+    try {
+        const res = await fetch(`${API_BASE}/settings/store`);
+        if (!res.ok) return;
+        const s = await res.json();
+
+        if (s.store_name) {
+            document.title = `${s.store_name} — Digital Gaming Marketplace`;
+            const brandEl = document.getElementById("storeNameText");
+            // pertahankan style "Nex<span>Shop</span>" kalau nama masih default,
+            // kalau admin ganti nama toko, tampilkan apa adanya
+            if (s.store_name.toLowerCase() !== "nexshop") {
+                brandEl.textContent = s.store_name;
+            }
+            document.getElementById("footerBrand").textContent = s.store_name;
+        }
+        if (s.tagline) {
+            document.getElementById("storeTagline").textContent = s.tagline;
+        }
+        if (s.logo_url) {
+            document.getElementById("storeLogoImg").src = s.logo_url;
+        }
+        if (s.contact_whatsapp) {
+            const waLink = document.getElementById("footerWaLink");
+            waLink.href = `https://wa.me/${s.contact_whatsapp.replace(/\D/g, "")}`;
+            waLink.textContent = `📱 WhatsApp Admin: ${s.contact_whatsapp}`;
+        }
+        if (s.contact_email) {
+            const emailLink = document.getElementById("footerEmailLink");
+            emailLink.href = `mailto:${s.contact_email}`;
+            emailLink.textContent = `✉️ ${s.contact_email}`;
+        }
+    } catch (err) {
+        // diem aja, biarin brand default kalau API gagal
+    }
+}
+
+/* ---------- Topup Diamond ---------- */
+let TOPUP_PRODUCTS = [];
+let selectedTopupCategory = "Semua";
+let activeTopupProduct = null;
+
+async function loadTopupProducts() {
+    try {
+        const res = await fetch(`${API_BASE}/topup/products`);
+        if (!res.ok) return;
+        TOPUP_PRODUCTS = await res.json();
+        renderTopupCategories();
+        renderTopupGrid();
+    } catch (err) {
+        // biarin section kosong kalau API gagal
+    }
+}
+
+function renderTopupCategories() {
+    const filter = document.getElementById("topupCategoryFilter");
+    const categories = ["Semua", ...new Set(TOPUP_PRODUCTS.map(p => p.kategori).filter(Boolean))];
+
+    if (categories.length <= 1) {
+        filter.innerHTML = "";
+        return;
+    }
+
+    filter.innerHTML = categories.map(cat => `
+        <button class="category-btn ${cat === selectedTopupCategory ? "active" : ""}" data-cat="${cat}">${cat}</button>
+    `).join("");
+
+    filter.querySelectorAll(".category-btn").forEach(btn => {
+        btn.onclick = () => {
+            selectedTopupCategory = btn.dataset.cat;
+            renderTopupCategories();
+            renderTopupGrid();
+        };
+    });
+}
+
+function renderTopupGrid() {
+    const grid = document.getElementById("topupGrid");
+    const data = selectedTopupCategory === "Semua"
+        ? TOPUP_PRODUCTS
+        : TOPUP_PRODUCTS.filter(p => p.kategori === selectedTopupCategory);
+
+    if (data.length === 0) {
+        grid.innerHTML = `<div class="topup-empty">Belum ada produk topup tersedia saat ini.</div>`;
+        return;
+    }
+
+    grid.innerHTML = data.map(p => `
+        <div class="topup-card" data-kode="${p.kode_produk}">
+            ${p.kategori ? `<span class="topup-cat-tag">${escapeHtml(p.kategori)}</span>` : ""}
+            <span class="diamond-icon">◆</span>
+            <h5>${escapeHtml(p.nama)}</h5>
+            <div class="topup-price">${rupiah(p.harga_jual)}</div>
+        </div>
+    `).join("");
+
+    grid.querySelectorAll(".topup-card").forEach(card => {
+        card.addEventListener("click", () => openTopupModal(card.dataset.kode));
+    });
+}
+
+function openTopupModal(kodeProduk) {
+    const p = TOPUP_PRODUCTS.find(x => x.kode_produk === kodeProduk);
+    if (!p) return;
+    activeTopupProduct = p;
+
+    document.getElementById("tpTitle").textContent = p.nama;
+    document.getElementById("tpPrice").textContent = rupiah(p.harga_jual);
+    document.getElementById("tpTujuan").value = "";
+    document.getElementById("tpServerId").value = "";
+    document.getElementById("tpEmail").value = currentUser ? currentUser.email : "";
+    document.getElementById("tpError").textContent = "";
+    document.getElementById("tpServerWrap").classList.toggle("hidden", !p.butuh_server_id);
+    document.getElementById("tpServerId").required = !!p.butuh_server_id;
+
+    openOverlay("topupOverlay");
+}
+
+document.getElementById("topupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!activeTopupProduct) return;
+
+    const tujuan = document.getElementById("tpTujuan").value.trim();
+    const server_id = document.getElementById("tpServerId").value.trim();
+    const recipient_email = document.getElementById("tpEmail").value.trim();
+    const errorEl = document.getElementById("tpError");
+    const submitBtn = document.getElementById("tpSubmitBtn");
+    const token = localStorage.getItem("nexshop_token");
+
+    errorEl.textContent = "";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Memproses...";
+
+    try {
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch(`${API_BASE}/topup`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                kode_produk: activeTopupProduct.kode_produk,
+                tujuan,
+                server_id: server_id || undefined,
+                recipient_email
+            })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            errorEl.textContent = data.message || "Gagal membuat pesanan topup";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Bayar Sekarang";
+            return;
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Bayar Sekarang";
+        closeOverlay("topupOverlay");
+
+        window.snap.pay(data.snap_token, {
+            onSuccess: function () {
+                toast(`Pembayaran berhasil! Diamond akan segera diproses ke ID ${tujuan}.`, "success");
+            },
+            onPending: function () {
+                toast("Menunggu pembayaran kamu. Diamond akan diproses otomatis setelah lunas.");
+            },
+            onError: function () {
+                toast("Pembayaran gagal. Silakan coba lagi.", "error");
+            },
+            onClose: function () {
+                toast("Kamu menutup jendela pembayaran sebelum selesai.");
+            }
+        });
+    } catch (err) {
+        errorEl.textContent = "Gagal terhubung ke server.";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Bayar Sekarang";
+    }
+});
+
 /* ---------- Init ---------- */
+loadStoreSettings();
 loadProducts();
 loadPromo();
+loadTopupProducts();
 updateCartCount();
 refreshAccountUI();

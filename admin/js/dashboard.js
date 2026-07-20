@@ -15,6 +15,9 @@ let currentImage = "";
 let ordersLoaded = false;
 let usersLoaded = false;
 let promoLoaded = false;
+let settingsLoaded = false;
+let topupProductsLoaded = false;
+let topupOrdersLoaded = false;
 
 const productModalEl = document.getElementById("productModal");
 const productModal = new bootstrap.Modal(productModalEl);
@@ -24,6 +27,13 @@ const imageInput = document.getElementById("image");
 const promoModalEl = document.getElementById("promoModal");
 const promoModal = new bootstrap.Modal(promoModalEl);
 let editingPromoId = null;
+let currentPromoImage = "";
+
+const topupProductModalEl = document.getElementById("topupProductModal");
+const topupProductModal = new bootstrap.Modal(topupProductModalEl);
+let editingTopupProductId = null;
+let topupProducts = [];
+let topupOrders = [];
 
 // ================================
 // Helpers
@@ -81,6 +91,8 @@ document.querySelectorAll("#sidebarNav .nav-link").forEach(link => {
         if (view === "orders" && !ordersLoaded) loadOrders();
         if (view === "users" && !usersLoaded) loadUsers();
         if (view === "promo" && !promoLoaded) loadPromo();
+        if (view === "topup" && !topupProductsLoaded) { loadTopupProducts(); loadTvBalance(); }
+        if (view === "settings" && !settingsLoaded) loadSettings();
     });
 });
 
@@ -538,13 +550,18 @@ function renderPromoSlides() {
     const tbody = document.getElementById("promoSlides");
 
     if (!promoSlides.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Belum ada slide. Klik "Tambah Slide" buat mulai.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Belum ada slide. Klik "Tambah Slide" buat mulai.</td></tr>`;
         return;
     }
 
     tbody.innerHTML = promoSlides.map(slide => `
         <tr>
             <td>${escapeHtml(slide.sort_order ?? 0)}</td>
+            <td>
+                ${slide.image_url
+                    ? `<img src="${escapeHtml(slide.image_url)}" alt="${escapeHtml(slide.title)}" style="width:70px;height:44px;object-fit:cover;border-radius:8px;">`
+                    : "-"}
+            </td>
             <td><span class="badge bg-secondary text-capitalize">${escapeHtml(slide.type || "promo")}</span></td>
             <td><strong>${escapeHtml(slide.title)}</strong></td>
             <td>
@@ -564,9 +581,24 @@ function renderPromoSlides() {
     `).join("");
 }
 
+const promoImageInput = document.getElementById("promoImageInput");
+const promoImagePreview = document.getElementById("promoImagePreview");
+
+if (promoImageInput) {
+    promoImageInput.addEventListener("change", () => {
+        const file = promoImageInput.files[0];
+        if (!file) return;
+        promoImagePreview.src = URL.createObjectURL(file);
+        promoImagePreview.classList.remove("d-none");
+    });
+}
+
 function openPromoModal() {
     editingPromoId = null;
+    currentPromoImage = "";
     document.getElementById("promoForm").reset();
+    promoImagePreview.src = "";
+    promoImagePreview.classList.add("d-none");
     document.getElementById("promoIsActive").checked = true;
     document.getElementById("promoModalTitle").innerHTML = '<i class="bi bi-megaphone me-2"></i>Tambah Slide';
     document.getElementById("promoError").textContent = "";
@@ -578,6 +610,7 @@ function editPromoSlide(id) {
     if (!slide) return;
 
     editingPromoId = id;
+    currentPromoImage = slide.image_url || "";
     document.getElementById("promoModalTitle").innerHTML = '<i class="bi bi-megaphone me-2"></i>Edit Slide';
     document.getElementById("promoType").value = slide.type || "promo";
     document.getElementById("promoSortOrder").value = slide.sort_order ?? 0;
@@ -586,7 +619,13 @@ function editPromoSlide(id) {
     document.getElementById("promoDesc").value = slide.description || "";
     document.getElementById("promoCtaText").value = slide.cta_text || "";
     document.getElementById("promoCtaLink").value = slide.cta_link || "";
-    document.getElementById("promoImageUrl").value = slide.image_url || "";
+    if (slide.image_url) {
+        promoImagePreview.src = slide.image_url;
+        promoImagePreview.classList.remove("d-none");
+    } else {
+        promoImagePreview.src = "";
+        promoImagePreview.classList.add("d-none");
+    }
     document.getElementById("promoIsActive").checked = !!slide.is_active;
     document.getElementById("promoError").textContent = "";
     promoModal.show();
@@ -606,27 +645,29 @@ async function savePromo() {
     saveBtn.disabled = true;
     saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...`;
 
-    const payload = {
-        type: document.getElementById("promoType").value,
-        sort_order: Number(document.getElementById("promoSortOrder").value || 0),
-        badge_text: document.getElementById("promoBadge").value.trim(),
-        title,
-        description: document.getElementById("promoDesc").value.trim(),
-        cta_text: document.getElementById("promoCtaText").value.trim(),
-        cta_link: document.getElementById("promoCtaLink").value.trim(),
-        image_url: document.getElementById("promoImageUrl").value.trim(),
-        is_active: document.getElementById("promoIsActive").checked
-    };
+    // FormData supaya file gambar bisa diupload langsung di request yang sama
+    const formData = new FormData();
+    formData.append("type", document.getElementById("promoType").value);
+    formData.append("sort_order", Number(document.getElementById("promoSortOrder").value || 0));
+    formData.append("badge_text", document.getElementById("promoBadge").value.trim());
+    formData.append("title", title);
+    formData.append("description", document.getElementById("promoDesc").value.trim());
+    formData.append("cta_text", document.getElementById("promoCtaText").value.trim());
+    formData.append("cta_link", document.getElementById("promoCtaLink").value.trim());
+    formData.append("is_active", document.getElementById("promoIsActive").checked);
+
+    const file = promoImageInput.files[0];
+    if (file) {
+        formData.append("image", file);
+    } else if (currentPromoImage) {
+        formData.append("image_url", currentPromoImage);
+    }
 
     try {
         const url = editingPromoId ? `/promo/${editingPromoId}` : "/promo";
         const method = editingPromoId ? "PUT" : "POST";
 
-        const res = await apiFetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+        const res = await apiFetch(url, { method, body: formData });
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.message || "Gagal menyimpan slide");
@@ -660,6 +701,383 @@ async function deletePromoSlide(id) {
     } catch (err) {
         if (err.message === "unauthorized") return;
         console.error(err);
+        showToast(err.message, true);
+    }
+}
+
+// ================================
+// Settings — Profil Admin / Toko / API Keys
+// ================================
+
+document.querySelectorAll("#settingsTabs [data-settings-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll("#settingsTabs .nav-link").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.settingsTab;
+        document.getElementById("settingsTabProfile").classList.toggle("d-none", tab !== "profile");
+        document.getElementById("settingsTabStore").classList.toggle("d-none", tab !== "store");
+        document.getElementById("settingsTabApiKeys").classList.toggle("d-none", tab !== "apikeys");
+    });
+});
+
+async function loadSettings() {
+    settingsLoaded = true;
+    try {
+        const [meRes, storeRes, keysRes] = await Promise.all([
+            apiFetch("/settings/me"),
+            apiFetch("/settings/store"),
+            apiFetch("/settings/api-keys")
+        ]);
+
+        if (meRes.ok) {
+            const me = await meRes.json();
+            document.getElementById("profileName").value = me.fullname || "";
+            document.getElementById("profileEmail").value = me.email || "";
+        }
+
+        if (storeRes.ok) {
+            const store = await storeRes.json();
+            document.getElementById("storeName").value = store.store_name || "";
+            document.getElementById("storeTagline").value = store.tagline || "";
+            document.getElementById("storeWhatsapp").value = store.contact_whatsapp || "";
+            document.getElementById("storeEmail").value = store.contact_email || "";
+            if (store.logo_url) {
+                document.getElementById("storeLogoPreview").src = store.logo_url;
+                document.getElementById("storeLogoPreview").classList.remove("d-none");
+            }
+        }
+
+        if (keysRes.ok) {
+            const keys = await keysRes.json();
+            document.getElementById("midtransServerKey").value = keys.midtrans_server_key || "";
+            document.getElementById("midtransClientKey").value = keys.midtrans_client_key || "";
+            document.getElementById("midtransIsProduction").checked = !!keys.midtrans_is_production;
+            document.getElementById("tvMemberCode").value = keys.tokovoucher_member_code || "";
+            document.getElementById("tvSecret").value = keys.tokovoucher_secret || "";
+        }
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        console.error(err);
+        showToast("Gagal memuat pengaturan", true);
+    }
+}
+
+async function saveProfile() {
+    const errorEl = document.getElementById("profileError");
+    errorEl.textContent = "";
+
+    const payload = {
+        fullname: document.getElementById("profileName").value.trim(),
+        email: document.getElementById("profileEmail").value.trim(),
+        current_password: document.getElementById("profileCurrentPassword").value,
+        new_password: document.getElementById("profileNewPassword").value
+    };
+
+    try {
+        const res = await apiFetch("/settings/me", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal menyimpan profil");
+
+        document.getElementById("profileCurrentPassword").value = "";
+        document.getElementById("profileNewPassword").value = "";
+        showToast("Profil berhasil disimpan");
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        errorEl.textContent = err.message;
+    }
+}
+
+const storeLogoInput = document.getElementById("storeLogoInput");
+if (storeLogoInput) {
+    storeLogoInput.addEventListener("change", () => {
+        const file = storeLogoInput.files[0];
+        if (!file) return;
+        const preview = document.getElementById("storeLogoPreview");
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove("d-none");
+    });
+}
+
+async function saveStoreSettings() {
+    const errorEl = document.getElementById("storeError");
+    errorEl.textContent = "";
+
+    try {
+        let logoUrl;
+        const file = storeLogoInput.files[0];
+        if (file) {
+            const formData = new FormData();
+            formData.append("image", file);
+            const uploadRes = await apiFetch("/upload?type=logo", { method: "POST", body: formData });
+            const uploadData = await uploadRes.json().catch(() => ({}));
+            if (!uploadRes.ok) throw new Error(uploadData.message || "Upload logo gagal");
+            logoUrl = uploadData.url;
+        }
+
+        const payload = {
+            store_name: document.getElementById("storeName").value.trim(),
+            tagline: document.getElementById("storeTagline").value.trim(),
+            contact_whatsapp: document.getElementById("storeWhatsapp").value.trim(),
+            contact_email: document.getElementById("storeEmail").value.trim()
+        };
+        if (logoUrl) payload.logo_url = logoUrl;
+
+        const res = await apiFetch("/settings/store", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal menyimpan pengaturan toko");
+
+        showToast("Pengaturan toko berhasil disimpan");
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        errorEl.textContent = err.message;
+    }
+}
+
+async function saveApiKeys() {
+    const errorEl = document.getElementById("apiKeysError");
+    errorEl.textContent = "";
+
+    const payload = {
+        midtrans_server_key: document.getElementById("midtransServerKey").value.trim(),
+        midtrans_client_key: document.getElementById("midtransClientKey").value.trim(),
+        midtrans_is_production: document.getElementById("midtransIsProduction").checked,
+        tokovoucher_member_code: document.getElementById("tvMemberCode").value.trim(),
+        tokovoucher_secret: document.getElementById("tvSecret").value.trim()
+    };
+
+    try {
+        const res = await apiFetch("/settings/api-keys", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal menyimpan API keys");
+
+        showToast("API keys berhasil disimpan");
+        loadSettings(); // refresh biar key sensitif balik ke bentuk tersamar
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        errorEl.textContent = err.message;
+    }
+}
+
+// ================================
+// Topup Diamond (TokoVoucher)
+// ================================
+
+document.querySelectorAll("#topupTabs [data-topup-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll("#topupTabs .nav-link").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.topupTab;
+        document.getElementById("topupTabProducts").classList.toggle("d-none", tab !== "products");
+        document.getElementById("topupTabOrders").classList.toggle("d-none", tab !== "orders");
+        if (tab === "orders" && !topupOrdersLoaded) loadTopupOrders();
+    });
+});
+
+async function loadTvBalance() {
+    try {
+        const res = await apiFetch("/topup/admin/balance");
+        const data = await res.json();
+        const badge = document.getElementById("tvBalanceBadge");
+        if (res.ok && data.data) {
+            badge.textContent = `Saldo TokoVoucher: Rp ${Number(data.data.saldo).toLocaleString("id-ID")}`;
+        } else {
+            badge.textContent = "Saldo TokoVoucher: belum terhubung";
+        }
+    } catch (err) {
+        document.getElementById("tvBalanceBadge").textContent = "Saldo TokoVoucher: belum terhubung";
+    }
+}
+
+async function syncTopupProducts() {
+    const kode = document.getElementById("tvSyncKode").value.trim();
+    if (!kode) {
+        showToast("Masukkan kode/prefix produk dulu, mis. ML", true);
+        return;
+    }
+    try {
+        const res = await apiFetch(`/topup/admin/sync?kode=${encodeURIComponent(kode)}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal sync produk");
+
+        showToast(data.message || "Produk berhasil disinkronkan");
+        loadTopupProducts();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        showToast(err.message, true);
+    }
+}
+
+async function loadTopupProducts() {
+    const tbody = document.getElementById("topupProducts");
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data...</td></tr>`;
+
+    try {
+        const res = await apiFetch("/topup/admin/products");
+        if (!res.ok) throw new Error("Gagal mengambil data produk topup");
+
+        topupProducts = await res.json();
+        topupProductsLoaded = true;
+        renderTopupProducts();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${escapeHtml(err.message)}</td></tr>`;
+    }
+}
+
+function renderTopupProducts() {
+    const tbody = document.getElementById("topupProducts");
+    if (!topupProducts.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">Belum ada produk. Sync dulu dari TokoVoucher di atas.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = topupProducts.map(p => `
+        <tr>
+            <td><code>${escapeHtml(p.kode_produk)}</code></td>
+            <td>${escapeHtml(p.nama)}</td>
+            <td>${escapeHtml(p.kategori || "-")}</td>
+            <td>Rp ${Number(p.harga_beli).toLocaleString("id-ID")}</td>
+            <td>Rp ${Number(p.harga_jual).toLocaleString("id-ID")}</td>
+            <td>${p.butuh_server_id ? `<span class="badge bg-info">Ya</span>` : "-"}</td>
+            <td>${p.is_active ? `<span class="badge bg-success">Aktif</span>` : `<span class="badge bg-secondary">Nonaktif</span>`}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editTopupProduct(${Number(p.id)})"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="deleteTopupProduct(${Number(p.id)})"><i class="bi bi-trash"></i></button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function editTopupProduct(id) {
+    const p = topupProducts.find(x => x.id === id);
+    if (!p) return;
+    editingTopupProductId = id;
+
+    document.getElementById("tpEditNama").value = p.nama || "";
+    document.getElementById("tpEditKategori").value = p.kategori || "";
+    document.getElementById("tpEditHargaBeli").value = "Rp " + Number(p.harga_beli).toLocaleString("id-ID");
+    document.getElementById("tpEditHargaJual").value = p.harga_jual;
+    document.getElementById("tpEditButuhServerId").checked = !!p.butuh_server_id;
+    document.getElementById("tpEditIsActive").checked = !!p.is_active;
+
+    topupProductModal.show();
+}
+
+async function saveTopupProduct() {
+    if (!editingTopupProductId) return;
+
+    const payload = {
+        nama: document.getElementById("tpEditNama").value.trim(),
+        kategori: document.getElementById("tpEditKategori").value.trim(),
+        harga_jual: Number(document.getElementById("tpEditHargaJual").value || 0),
+        butuh_server_id: document.getElementById("tpEditButuhServerId").checked,
+        is_active: document.getElementById("tpEditIsActive").checked
+    };
+
+    try {
+        const res = await apiFetch(`/topup/admin/products/${editingTopupProductId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal menyimpan produk");
+
+        topupProductModal.hide();
+        loadTopupProducts();
+        showToast("Produk topup berhasil disimpan");
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        showToast(err.message, true);
+    }
+}
+
+async function deleteTopupProduct(id) {
+    if (!confirm("Hapus produk topup ini?")) return;
+    try {
+        const res = await apiFetch(`/topup/admin/products/${id}`, { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal menghapus produk");
+
+        showToast(data.message || "Produk berhasil dihapus");
+        loadTopupProducts();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        showToast(err.message, true);
+    }
+}
+
+async function loadTopupOrders() {
+    const tbody = document.getElementById("topupOrders");
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data...</td></tr>`;
+
+    try {
+        const res = await apiFetch("/topup/admin/orders");
+        if (!res.ok) throw new Error("Gagal mengambil data pesanan topup");
+
+        topupOrders = await res.json();
+        topupOrdersLoaded = true;
+        renderTopupOrders();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${escapeHtml(err.message)}</td></tr>`;
+    }
+}
+
+function statusBadge(status) {
+    const map = {
+        pending: "bg-secondary", paid: "bg-info", processing: "bg-warning",
+        sukses: "bg-success", gagal: "bg-danger", failed: "bg-danger"
+    };
+    return `<span class="badge ${map[status] || "bg-secondary"}">${escapeHtml(status || "-")}</span>`;
+}
+
+function renderTopupOrders() {
+    const tbody = document.getElementById("topupOrders");
+    if (!topupOrders.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Belum ada pesanan topup.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = topupOrders.map(o => `
+        <tr>
+            <td><code>${escapeHtml(o.id)}</code></td>
+            <td>${escapeHtml(o.nama_produk || o.kode_produk)}</td>
+            <td>${escapeHtml(o.tujuan)}${o.server_id ? " | " + escapeHtml(o.server_id) : ""}</td>
+            <td>Rp ${Number(o.harga).toLocaleString("id-ID")}</td>
+            <td>${statusBadge(o.status)}</td>
+            <td>${o.created_at ? new Date(o.created_at).toLocaleString("id-ID") : "-"}</td>
+            <td>
+                <button class="btn btn-outline-secondary btn-sm" onclick="recheckTopupStatus('${o.id}')" title="Cek ulang status ke TokoVoucher">
+                    <i class="bi bi-arrow-repeat"></i>
+                </button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+async function recheckTopupStatus(id) {
+    try {
+        const res = await apiFetch(`/topup/status/${id}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal cek status");
+
+        showToast(`Status terbaru: ${data.status || "-"}`);
+        loadTopupOrders();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
         showToast(err.message, true);
     }
 }

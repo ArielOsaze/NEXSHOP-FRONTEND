@@ -6,18 +6,20 @@
 <title>NexShop — Digital Gaming Marketplace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<div class="grid-overlay" aria-hidden="true"></div>
+
 <header>
     <nav class="navbar">
         <div class="brand">
-            <img src="images/nexshop-icon.svg" class="logo" alt="NexShop logo">
+            <img src="images/nexshop-icon.svg" class="logo" id="storeLogoImg" alt="NexShop logo">
             <div>
-                <h1>Nex<span>Shop</span></h1>
-                <div class="tagline">Play More. Pay Less.</div>
+                <h1 id="storeNameText">Nex<span>Shop</span></h1>
+                <div class="tagline" id="storeTagline">Play More. Pay Less.</div>
             </div>
         </div>
 
@@ -27,7 +29,8 @@
 
         <div class="menu" id="navMenu">
             <a href="#top">Home</a>
-            <a href="#games">Game</a>
+            <a href="#games">Katalog</a>
+            <a href="#topup">Topup Diamond</a>
             <button class="menu-account-btn" id="accountBtn">Login</button>
         </div>
 
@@ -47,8 +50,12 @@
 </section>
 
 <main>
+
+<div class="section-divider" aria-hidden="true"></div>
+
 <section class="games" id="games">
     <div class="section-heading">
+        <span class="eyebrow">Katalog Toko</span>
         <h3>Katalog Populer</h3>
         <p>Dipilih langsung dari yang paling laris minggu ini</p>
     </div>
@@ -57,17 +64,34 @@
 
     <div class="card-grid" id="cardGrid"></div>
 </section>
+
+<div class="section-divider reverse" aria-hidden="true"></div>
+
+<section class="topup-section" id="topup">
+    <div class="section-heading topup-heading">
+        <span class="eyebrow eyebrow-cyan">Instan &amp; Otomatis</span>
+        <h3>Topup Diamond &amp; Voucher Game</h3>
+        <p>Masukkan ID game kamu, bayar, diamond langsung masuk — tanpa ribet, prosesnya otomatis 24 jam.</p>
+    </div>
+
+    <div class="topup-category-filter" id="topupCategoryFilter"></div>
+
+    <div class="topup-grid" id="topupGrid">
+        <div class="topup-empty" id="topupEmpty">Belum ada produk topup tersedia saat ini.</div>
+    </div>
+</section>
+
 </main>
 
 <footer class="site-footer">
-    <div class="footer-brand">Nex<span>Shop</span></div>
+    <div class="footer-brand" id="footerBrand">Nex<span>Shop</span></div>
     <p>Marketplace gaming digital terpercaya. Transaksi aman, proses cepat.</p>
 
     <div class="footer-contact">
-        <a href="https://wa.me/6287792634063" target="_blank" rel="noopener">
+        <a href="https://wa.me/6287792634063" id="footerWaLink" target="_blank" rel="noopener">
             📱 WhatsApp Admin: 0877-9263-4063
         </a>
-        <a href="mailto:nexshop.my.id@gmail.com">
+        <a href="mailto:nexshop.my.id@gmail.com" id="footerEmailLink">
             ✉️ nexshop.my.id@gmail.com
         </a>
     </div>
@@ -97,7 +121,8 @@
                 <li>Seluruh transaksi diproses melalui payment gateway resmi <strong>Midtrans</strong> (QRIS, Virtual Account/Transfer Bank, E-Wallet, dan Kartu Kredit/Debit). NexShop tidak menerima pembayaran manual di luar sistem.</li>
                 <li>Pastikan data akun/email yang kamu daftarkan sudah benar. Pesanan akan diproses dan dikirim ke email yang terdaftar setelah pembayaran terverifikasi oleh Midtrans.</li>
                 <li>Waktu proses pesanan umumnya beberapa menit hingga maksimal 24 jam pada jam kerja, tergantung ketersediaan stok.</li>
-                <li>Produk yang dijual berupa akun/akses/kode digital. Dilarang keras memperjualbelikan kembali, membagikan, atau mengubah kredensial akun tanpa izin — pelanggaran membatalkan garansi.</li>
+                <li>Produk yang dijual berupa akun/akses/kode digital maupun topup diamond/voucher game. Dilarang keras memperjualbelikan kembali, membagikan, atau mengubah kredensial akun tanpa izin — pelanggaran membatalkan garansi.</li>
+                <li>Untuk produk Topup Diamond, pastikan ID/Server tujuan yang dimasukkan sudah benar. NexShop tidak bertanggung jawab atas kesalahan input ID dari pembeli.</li>
                 <li>NexShop berhak menolak atau membatalkan pesanan yang terindikasi penyalahgunaan, transaksi mencurigakan, atau melanggar kebijakan ini.</li>
                 <li>NexShop dapat memperbarui syarat &amp; ketentuan ini sewaktu-waktu; perubahan berlaku sejak dipublikasikan di halaman ini.</li>
                 <li>Untuk pertanyaan seputar transaksi, hubungi admin melalui WhatsApp atau email yang tercantum di footer.</li>
@@ -109,8 +134,8 @@
             <ol class="policy-list">
                 <li>Refund/pengembalian dana dapat diajukan apabila: pembayaran berhasil terpotong namun pesanan tidak diproses, produk yang diterima tidak sesuai deskripsi, atau akun/kode yang diberikan tidak valid/tidak bisa digunakan.</li>
                 <li>Pengajuan refund wajib disertai bukti pembayaran (order ID / bukti transaksi Midtrans) dan dilaporkan ke admin maksimal <strong>1x24 jam</strong> setelah pesanan diterima.</li>
-                <li>Refund <strong>tidak berlaku</strong> apabila akun/kode sudah digunakan, kredensial (email/password) sudah diubah oleh pembeli, atau pelanggaran terhadap Syarat &amp; Ketentuan (misalnya membagikan akun ke pihak lain).</li>
-                <li>Refund <strong>tidak berlaku</strong> untuk kesalahan input data dari pembeli (misalnya email tujuan salah) setelah pesanan berhasil diproses.</li>
+                <li>Refund <strong>tidak berlaku</strong> apabila akun/kode sudah digunakan, kredensial (email/password) sudah diubah oleh pembeli, atau ID/Server tujuan topup yang dimasukkan salah dari sisi pembeli.</li>
+                <li>Refund <strong>tidak berlaku</strong> untuk kesalahan input data dari pembeli (misalnya email tujuan atau ID game salah) setelah pesanan berhasil diproses.</li>
                 <li>Dana yang disetujui untuk direfund akan dikembalikan ke metode pembayaran asal melalui sistem Midtrans, dengan estimasi proses 3–14 hari kerja tergantung kebijakan bank/e-wallet/penyedia pembayaran terkait.</li>
                 <li>Untuk mengajukan refund atau komplain, hubungi admin melalui WhatsApp <a href="https://wa.me/6287792634063" target="_blank" rel="noopener">0877-9263-4063</a> atau email <a href="mailto:nexshop.my.id@gmail.com">nexshop.my.id@gmail.com</a> dengan menyertakan Order ID.</li>
             </ol>
@@ -148,6 +173,35 @@
                 <button class="btn-primary pm-add" id="pmAddBtn">Tambah ke Keranjang</button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Topup Product Modal -->
+<div class="overlay" id="topupOverlay">
+    <div class="modal topup-modal" role="dialog" aria-modal="true" aria-labelledby="tpTitle">
+        <button class="modal-close" data-close="topupOverlay" aria-label="Tutup">✕</button>
+        <form class="topup-modal-body" id="topupForm">
+            <div class="topup-modal-head">
+                <span class="diamond-icon">◆</span>
+                <div>
+                    <h3 id="tpTitle"></h3>
+                    <div class="tp-price" id="tpPrice"></div>
+                </div>
+            </div>
+
+            <label>Player ID / User ID
+                <input type="text" id="tpTujuan" required placeholder="Masukkan Player ID kamu">
+            </label>
+            <label id="tpServerWrap" class="hidden">Server ID
+                <input type="text" id="tpServerId" placeholder="Masukkan Server ID">
+            </label>
+            <label>Email (buat kirim bukti transaksi)
+                <input type="email" id="tpEmail" required placeholder="kamu@email.com">
+            </label>
+
+            <p class="auth-error" id="tpError"></p>
+            <button type="submit" class="btn-primary btn-cyan" id="tpSubmitBtn">Bayar Sekarang</button>
+        </form>
     </div>
 </div>
 
