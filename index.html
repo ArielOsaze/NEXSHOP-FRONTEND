@@ -240,7 +240,10 @@
                 <input type="email" id="loginEmail" required placeholder="kamu@email.com">
             </label>
             <label>Kata Sandi
-                <input type="password" id="loginPassword" required minlength="4" placeholder="••••••••">
+                <div class="password-field">
+                    <input type="password" id="loginPassword" required minlength="4" placeholder="••••••••">
+                    <button type="button" class="toggle-password" data-target="loginPassword" aria-label="Tampilkan password">👁</button>
+                </div>
             </label>
             <p class="auth-error" id="loginError"></p>
             <button type="submit" class="btn-primary">Masuk</button>
@@ -255,7 +258,10 @@
                 <input type="email" id="regEmail" required placeholder="kamu@email.com">
             </label>
             <label>Kata Sandi
-                <input type="password" id="regPassword" required minlength="4" placeholder="Minimal 4 karakter">
+                <div class="password-field">
+                    <input type="password" id="regPassword" required minlength="4" placeholder="Minimal 4 karakter">
+                    <button type="button" class="toggle-password" data-target="regPassword" aria-label="Tampilkan password">👁</button>
+                </div>
             </label>
             <p class="auth-error" id="regError"></p>
             <button type="submit" class="btn-primary">Daftar</button>
@@ -314,6 +320,11 @@
                     <strong>💳 Pembayaran via Midtrans</strong>
                     <p>Setelah klik "Bayar Sekarang", kamu akan memilih metode pembayaran (QRIS, Virtual Account/Transfer Bank, E-Wallet, atau Kartu Kredit/Debit) langsung di halaman pembayaran Midtrans yang aman.</p>
                 </div>
+                <div class="promo-code-row">
+                    <input type="text" id="promoCodeInput" placeholder="Punya kode promo?">
+                    <button type="button" id="applyPromoBtn">Terapkan</button>
+                </div>
+                <p class="promo-code-msg" id="promoCodeMsg"></p>
                 <div class="checkout-summary" id="checkoutSummary"></div>
                 <button type="submit" class="btn-primary">Bayar Sekarang</button>
             </form>

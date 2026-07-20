@@ -24,6 +24,7 @@
         <li class="nav-item"><a class="nav-link text-white" href="#" data-view="topup"><i class="bi bi-gem me-2"></i>Topup Diamond</a></li>
         <li class="nav-item"><a class="nav-link text-white" href="#" data-view="users"><i class="bi bi-people me-2"></i>Users</a></li>
         <li class="nav-item"><a class="nav-link text-white" href="#" data-view="promo"><i class="bi bi-megaphone me-2"></i>Promo</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#" data-view="promocodes"><i class="bi bi-ticket-perforated me-2"></i>Kode Promo</a></li>
         <li class="nav-item"><a class="nav-link text-white" href="#" data-view="settings"><i class="bi bi-gear me-2"></i>Settings</a></li>
     </ul>
 
@@ -226,6 +227,34 @@
                 </thead>
                 <tbody id="promoSlides">
                     <tr><td colspan="6" class="text-center text-muted py-4">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ===== Kode Promo view ===== -->
+<section id="view-promocodes" class="view-section d-none">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2>Kode Promo</h2>
+            <p class="text-muted mb-0">Redeem code buat diskon checkout produk toko</p>
+        </div>
+        <button class="btn btn-success text-nowrap" onclick="openPromoCodeModal()">
+            <i class="bi bi-plus-circle"></i> Buat Kode Promo
+        </button>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>Kode</th><th>Diskon</th><th>Min. Belanja</th><th>Pemakaian</th><th>Kedaluwarsa</th><th>Status</th><th>Aksi</th>
+                </tr>
+                </thead>
+                <tbody id="promoCodes">
+                    <tr><td colspan="7" class="text-center text-muted py-4">Memuat data...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -478,6 +507,70 @@
 </div>
 </div>
 
+<!-- Kode Promo Modal -->
+<div class="modal fade" id="promoCodeModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+    <div class="modal-header">
+        <h5 class="modal-title" id="promoCodeModalTitle"><i class="bi bi-ticket-perforated me-2"></i>Buat Kode Promo</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        <form id="promoCodeForm" class="row g-3">
+            <div class="col-12">
+                <label class="form-label">Kode</label>
+                <input id="pcCode" class="form-control text-uppercase" placeholder="MERDEKA25" style="text-transform:uppercase;">
+            </div>
+            <div class="col-12">
+                <label class="form-label">Deskripsi <span class="text-muted">(opsional, buat catatan internal)</span></label>
+                <input id="pcDescription" class="form-control" placeholder="Promo 17 Agustus">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Tipe Diskon</label>
+                <select id="pcDiscountType" class="form-control">
+                    <option value="percent">Persen (%)</option>
+                    <option value="fixed">Nominal (Rp)</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Nilai Diskon</label>
+                <input id="pcDiscountValue" type="number" min="0" class="form-control" placeholder="Contoh: 25">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Maks. Potongan <span class="text-muted">(khusus tipe %, opsional)</span></label>
+                <input id="pcMaxDiscount" type="number" min="0" class="form-control" placeholder="Contoh: 50000">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Minimal Belanja</label>
+                <input id="pcMinPurchase" type="number" min="0" class="form-control" placeholder="0">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Batas Pemakaian <span class="text-muted">(opsional)</span></label>
+                <input id="pcMaxUses" type="number" min="1" class="form-control" placeholder="Tanpa batas">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Kedaluwarsa <span class="text-muted">(opsional)</span></label>
+                <input id="pcExpiresAt" type="date" class="form-control">
+            </div>
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="pcIsActive" checked>
+                    <label class="form-check-label" for="pcIsActive">Aktif</label>
+                </div>
+            </div>
+            <p class="text-danger small mb-0" id="promoCodeError"></p>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-success" id="savePromoCodeBtn" onclick="savePromoCode()">
+            <i class="bi bi-floppy"></i> Simpan
+        </button>
+    </div>
+</div>
+</div>
+</div>
+
 <!-- Product Modal -->
 <div class="modal fade" id="productModal" tabindex="-1">
 <div class="modal-dialog modal-lg">
@@ -500,6 +593,20 @@
                 <div class="col-md-6">
                     <label class="form-label">Harga</label>
                     <input id="price" type="number" min="1" class="form-control" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Harga Coret <span class="text-muted">(opsional)</span></label>
+                    <input id="strikePrice" type="number" min="1" class="form-control" placeholder="Contoh: 200000">
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="isFlashSale">
+                        <label class="form-check-label" for="isFlashSale">
+                            🔥 Aktifkan Flash Sale (coret Harga Coret, tampilkan Harga sebagai harga promo)
+                        </label>
+                    </div>
                 </div>
 
                 <div class="col-md-6">

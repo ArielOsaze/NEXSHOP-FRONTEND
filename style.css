@@ -238,8 +238,24 @@ header{ position:sticky; top:0; z-index:100; }
 .card-body h4{ font-size:15px; margin-bottom:6px; color:var(--text); }
 .card-rating{ font-size:12px; color:var(--text-muted); margin-bottom:12px; }
 .stars{ color:var(--warning); letter-spacing:1px; }
-.card-footer{ display:flex; align-items:center; justify-content:space-between; }
+.card-footer{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .card-price{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--text); }
+.card-price-block{ display:flex; flex-direction:column; gap:1px; }
+.price-strike{ font-family:'Space Grotesk',sans-serif; font-size:12px; color:var(--text-dim); text-decoration:line-through; }
+.price-now{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--text); }
+.price-now.promo{ color:var(--magenta); }
+.price-now.lg{ font-size:24px; }
+.price-strike.lg{ font-size:15px; }
+.discount-chip{
+    display:inline-block; margin-top:2px; padding:2px 7px; border-radius:100px;
+    background:rgba(240,57,154,.18); border:1px solid rgba(240,57,154,.5);
+    color:var(--magenta); font-family:'Space Grotesk',sans-serif; font-size:10.5px; font-weight:700;
+}
+.flash-ribbon{
+    position:absolute; top:10px; right:10px; padding:4px 10px; border-radius:100px;
+    background:linear-gradient(135deg,var(--magenta),#F5761F); color:#fff;
+    font-size:11px; font-weight:700; box-shadow:0 0 16px rgba(240,57,154,.5);
+}
 .add-btn{
     padding:8px 16px; border-radius:100px; font-size:13px; font-weight:700;
     background:rgba(139,92,246,.15); color:var(--violet); border:1px solid rgba(139,92,246,.4);
@@ -343,7 +359,7 @@ header{ position:sticky; top:0; z-index:100; }
 .product-modal-info h3{ font-size:20px; margin-bottom:8px; }
 .pm-rating{ font-size:13px; color:var(--text-muted); margin-bottom:12px; }
 .pm-desc{ color:var(--text-muted); font-size:14px; margin-bottom:16px; }
-.pm-price{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:24px; color:var(--text); margin-bottom:18px; }
+.pm-price{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:24px; color:var(--text); margin-bottom:18px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .pm-qty{ display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; font-size:14px; color:var(--text-muted); }
 .qty-control{ display:flex; align-items:center; gap:14px; background:var(--bg-panel-2); border-radius:100px; padding:6px 16px; }
 .qty-control button{ width:22px; height:22px; font-size:16px; color:var(--text); }
@@ -367,6 +383,16 @@ input, textarea, select{
 }
 input:focus, textarea:focus, select:focus{ outline:none; border-color:var(--violet); box-shadow:0 0 0 3px rgba(139,92,246,.18); }
 input::placeholder{ color:var(--text-dim); }
+
+.password-field{ position:relative; display:flex; }
+.password-field input{ width:100%; padding-right:44px; }
+.toggle-password{
+    position:absolute; right:4px; top:50%; transform:translateY(-50%);
+    width:34px; height:34px; border-radius:8px; font-size:16px; opacity:.6;
+    display:flex; align-items:center; justify-content:center; transition:opacity .2s;
+}
+.toggle-password:hover{ opacity:1; }
+.toggle-password.showing{ opacity:1; filter:hue-rotate(90deg); }
 
 .btn-primary{
     width:100%; padding:13px; border-radius:100px; font-weight:700; font-size:14px; color:#fff;
@@ -440,7 +466,18 @@ input::placeholder{ color:var(--text-dim); }
 .checkout-guest-note button{ color:var(--violet); text-decoration:underline; font-weight:600; }
 .checkout-summary{ background:var(--bg-panel-2); border-radius:var(--radius-sm); padding:14px; font-size:13.5px; }
 .checkout-summary .row{ display:flex; justify-content:space-between; padding:4px 0; color:var(--text-muted); }
+.checkout-summary .row.discount{ color:var(--success); }
 .checkout-summary .row.total{ font-weight:700; color:var(--text); border-top:1px solid var(--line); margin-top:6px; padding-top:10px; }
+.promo-code-row{ display:flex; gap:8px; }
+.promo-code-row input{ flex:1; }
+.promo-code-row button{
+    padding:0 18px; border-radius:var(--radius-sm); background:var(--bg-panel-3);
+    color:var(--text); font-weight:700; font-size:13px; white-space:nowrap; transition:.2s;
+}
+.promo-code-row button:hover{ background:var(--violet); }
+.promo-code-msg{ font-size:12.5px; min-height:14px; }
+.promo-code-msg.success{ color:var(--success); }
+.promo-code-msg.error{ color:var(--danger); }
 #checkoutSuccess{ text-align:center; padding:20px 0; }
 .success-icon{
     width:64px; height:64px; border-radius:50%; margin:0 auto 20px;
@@ -463,6 +500,17 @@ input::placeholder{ color:var(--text-dim); }
 
 /* ================= RESPONSIVE ================= */
 @media(max-width:860px){
+    .hero-carousel{ height:min(120vw,520px); }
+    .hero-text{ padding:0 20px; max-width:100%; }
+    .hero-text p{ max-width:100%; }
+    .hero-arrow{
+        top:auto; bottom:16px; transform:none;
+        width:34px; height:34px; font-size:18px;
+    }
+    .hero-arrow-left{ left:auto; right:64px; }
+    .hero-arrow-right{ right:16px; }
+    .hero-dots{ left:16px; bottom:26px; transform:none; }
+
     .menu{
         position:fixed; top:66px; left:0; right:0; z-index:99;
         background:var(--bg-void); border-bottom:1px solid var(--line);

@@ -5,6 +5,14 @@ if (localStorage.getItem("token")) {
     window.location.href = "dashboard.html";
 }
 
+if (localStorage.getItem("nexshop_admin_logout_reason") === "idle") {
+    localStorage.removeItem("nexshop_admin_logout_reason");
+    window.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("loginError").textContent =
+            "Kamu otomatis di-logout karena tidak ada aktivitas selama 15 menit. Silakan login kembali.";
+    });
+}
+
 const form = document.getElementById("loginForm");
 const errorEl = document.getElementById("loginError");
 const loginBtn = document.getElementById("loginBtn");

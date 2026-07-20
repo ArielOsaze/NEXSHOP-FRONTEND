@@ -10,6 +10,26 @@ let selectedCategory = "Semua";
 const API_BASE = "https://nexshop-backend-production.up.railway.app/api";
 
 const rupiah = (n) => "Rp" + n.toLocaleString("id-ID");
+
+// Kalau Flash Sale aktif dan ada harga coret yang lebih tinggi dari harga
+// jual, tampilkan harga coret + persentase diskon. Kalau enggak, tampilan
+// normal seperti biasa.
+function isFlashSaleActive(p) {
+    return !!p.is_flash_sale && p.strike_price && Number(p.strike_price) > Number(p.price);
+}
+function discountPercent(p) {
+    return Math.round((1 - Number(p.price) / Number(p.strike_price)) * 100);
+}
+function priceBlockHtml(p, size = "sm") {
+    if (!isFlashSaleActive(p)) {
+        return `<span class="price-now ${size}">${rupiah(p.price)}</span>`;
+    }
+    return `
+        <span class="price-strike ${size}">${rupiah(p.strike_price)}</span>
+        <span class="price-now ${size} promo">${rupiah(p.price)}</span>
+        <span class="discount-chip">-${discountPercent(p)}%</span>
+    `;
+}
 const stars = (rating) => "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
 
 /* ---------- State (persisted) ---------- */
@@ -136,12 +156,13 @@ setTimeout(() => {
             <div class="card-img">
                 <img src="${p.image}" alt="${p.name}">
                 <span class="badge">${p.badge}</span>
+                ${isFlashSaleActive(p) ? `<span class="flash-ribbon">🔥 -${discountPercent(p)}%</span>` : ""}
             </div>
             <div class="card-body">
                 <h4>${p.name}</h4>
                 <div class="card-rating"><span class="stars">${stars(p.rating)}</span> ${p.rating} · ${p.sold} terjual</div>
                 <div class="card-footer">
-                    <span class="card-price">${rupiah(p.price)}</span>
+                    <div class="card-price-block">${priceBlockHtml(p, "sm")}</div>
                     <button type="button" class="add-btn" data-id="${p.id}">Beli</button>
                 </div>
             </div>
@@ -182,7 +203,7 @@ function openProductModal(id) {
     document.getElementById("pmStars").innerHTML = `<span class="stars">${stars(p.rating)}</span> ${p.rating}`;
     document.getElementById("pmSold").textContent = `· ${p.sold} terjual`;
   document.getElementById("pmDesc").textContent = p.description;
-    document.getElementById("pmPrice").textContent = rupiah(p.price);
+    document.getElementById("pmPrice").innerHTML = priceBlockHtml(p, "lg");
     document.getElementById("pmQtyValue").textContent = pendingQty;
 
     openOverlay("productOverlay");
@@ -505,12 +526,39 @@ document.getElementById("myOrdersBtn").addEventListener("click", async () => {
 });
 
 /* ---------- Checkout ---------- */
+let appliedPromo = null; // { code, discount }
+
+function cartSubtotal() {
+    return cart.reduce((sum, item) => {
+        const p = PRODUCTS.find(x => x.id === item.id);
+        return sum + p.price * item.qty;
+    }, 0);
+}
+
+function renderCheckoutSummary() {
+    const subtotal = cartSubtotal();
+    const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
+    const discount = appliedPromo ? appliedPromo.discount : 0;
+    const total = Math.max(subtotal - discount, 0);
+
+    document.getElementById("checkoutSummary").innerHTML = `
+        <div class="row"><span>${itemCount} item</span><span>${rupiah(subtotal)}</span></div>
+        ${appliedPromo ? `<div class="row discount"><span>Diskon (${appliedPromo.code})</span><span>-${rupiah(discount)}</span></div>` : ""}
+        <div class="row total"><span>Total Bayar</span><span>${rupiah(total)}</span></div>
+    `;
+}
+
 document.getElementById("checkoutBtn").addEventListener("click", () => {
     if (cart.length === 0) {
         toast("Keranjang masih kosong.", "error");
         return;
     }
     closeOverlay("cartOverlay");
+
+    appliedPromo = null;
+    document.getElementById("promoCodeInput").value = "";
+    document.getElementById("promoCodeMsg").textContent = "";
+    document.getElementById("promoCodeMsg").className = "promo-code-msg";
 
     document.getElementById("checkoutGuestNote").classList.toggle("hidden", !!currentUser);
 
@@ -522,20 +570,47 @@ document.getElementById("checkoutBtn").addEventListener("click", () => {
         document.getElementById("checkoutEmail").value = "";
     }
 
-    const total = cart.reduce((sum, item) => {
-        const p = PRODUCTS.find(x => x.id === item.id);
-        return sum + p.price * item.qty;
-    }, 0);
-    const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
-
-    document.getElementById("checkoutSummary").innerHTML = `
-        <div class="row"><span>${itemCount} item</span><span>${rupiah(total)}</span></div>
-        <div class="row total"><span>Total Bayar</span><span>${rupiah(total)}</span></div>
-    `;
+    renderCheckoutSummary();
 
     document.getElementById("checkoutStep").classList.remove("hidden");
     document.getElementById("checkoutSuccess").classList.add("hidden");
     openOverlay("checkoutOverlay");
+});
+
+document.getElementById("applyPromoBtn").addEventListener("click", async () => {
+    const code = document.getElementById("promoCodeInput").value.trim();
+    const msgEl = document.getElementById("promoCodeMsg");
+
+    if (!code) {
+        msgEl.textContent = "Masukkan kode promo dulu";
+        msgEl.className = "promo-code-msg error";
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/promo-codes/validate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code, subtotal: cartSubtotal() })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.valid) {
+            appliedPromo = null;
+            msgEl.textContent = data.message || "Kode promo tidak valid";
+            msgEl.className = "promo-code-msg error";
+            renderCheckoutSummary();
+            return;
+        }
+
+        appliedPromo = { code: data.code, discount: data.discount };
+        msgEl.textContent = `Kode "${data.code}" berhasil diterapkan! Hemat ${rupiah(data.discount)}`;
+        msgEl.className = "promo-code-msg success";
+        renderCheckoutSummary();
+    } catch (err) {
+        msgEl.textContent = "Gagal menghubungi server";
+        msgEl.className = "promo-code-msg error";
+    }
 });
 
 document.getElementById("checkoutLoginLink").addEventListener("click", () => {
@@ -550,10 +625,8 @@ document.getElementById("checkoutForm").addEventListener("submit", async (e) => 
     const token = localStorage.getItem("nexshop_token");
     const submitBtn = e.target.querySelector('button[type="submit"]');
 
-    const total = cart.reduce((sum, item) => {
-        const p = PRODUCTS.find(x => x.id === item.id);
-        return sum + p.price * item.qty;
-    }, 0);
+    const subtotal = cartSubtotal();
+    const total = appliedPromo ? Math.max(subtotal - appliedPromo.discount, 0) : subtotal;
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Memproses...";
@@ -561,15 +634,21 @@ document.getElementById("checkoutForm").addEventListener("submit", async (e) => 
     try {
         // Backend creates the order AND the Midtrans transaction (server-side,
         // using the Midtrans Server Key), then returns a snap_token here.
-        // ⚠️ Confirm the exact endpoint + response field names with your backend —
-        // adjust `data.snap_token` / `data.orderId` below if they differ.
+        // Total dihitung ulang & divalidasi lagi di backend — nilai di sini cuma buat tampilan.
         const headers = { "Content-Type": "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
         const res = await fetch(`${API_BASE}/orders`, {
             method: "POST",
             headers,
-            body: JSON.stringify({ recipient_name, recipient_email, payment_method: "midtrans", items: cart, total })
+            body: JSON.stringify({
+                recipient_name,
+                recipient_email,
+                payment_method: "midtrans",
+                items: cart,
+                total,
+                promo_code: appliedPromo ? appliedPromo.code : undefined
+            })
         });
         const data = await res.json();
 
@@ -923,6 +1002,17 @@ document.getElementById("topupForm").addEventListener("submit", async (e) => {
         submitBtn.disabled = false;
         submitBtn.textContent = "Bayar Sekarang";
     }
+});
+
+/* ---------- Show/hide password ---------- */
+document.querySelectorAll(".toggle-password").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const input = document.getElementById(btn.dataset.target);
+        const showing = input.type === "text";
+        input.type = showing ? "password" : "text";
+        btn.classList.toggle("showing", !showing);
+        btn.textContent = showing ? "👁" : "🙈";
+    });
 });
 
 /* ---------- Init ---------- */

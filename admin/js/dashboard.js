@@ -18,6 +18,9 @@ let promoLoaded = false;
 let settingsLoaded = false;
 let topupProductsLoaded = false;
 let topupOrdersLoaded = false;
+let promoCodesLoaded = false;
+let promoCodes = [];
+let editingPromoCodeId = null;
 
 const productModalEl = document.getElementById("productModal");
 const productModal = new bootstrap.Modal(productModalEl);
@@ -34,6 +37,9 @@ const topupProductModal = new bootstrap.Modal(topupProductModalEl);
 let editingTopupProductId = null;
 let topupProducts = [];
 let topupOrders = [];
+
+const promoCodeModalEl = document.getElementById("promoCodeModal");
+const promoCodeModal = new bootstrap.Modal(promoCodeModalEl);
 
 // ================================
 // Helpers
@@ -91,6 +97,7 @@ document.querySelectorAll("#sidebarNav .nav-link").forEach(link => {
         if (view === "orders" && !ordersLoaded) loadOrders();
         if (view === "users" && !usersLoaded) loadUsers();
         if (view === "promo" && !promoLoaded) loadPromo();
+        if (view === "promocodes" && !promoCodesLoaded) loadPromoCodes();
         if (view === "topup" && !topupProductsLoaded) { loadTopupProducts(); loadTvBalance(); }
         if (view === "settings" && !settingsLoaded) loadSettings();
     });
@@ -261,6 +268,8 @@ function editProduct(id) {
 
     document.getElementById("name").value = product.name;
     document.getElementById("price").value = product.price;
+    document.getElementById("strikePrice").value = product.strike_price || "";
+    document.getElementById("isFlashSale").checked = !!product.is_flash_sale;
     document.getElementById("badge").value = product.badge || "";
     document.getElementById("category").value = product.category || "";
     document.getElementById("rating").value = product.rating || "";
@@ -327,6 +336,8 @@ async function saveProduct() {
         const product = {
             name: document.getElementById("name").value.trim(),
             price,
+            strike_price: Number(document.getElementById("strikePrice").value || 0) || null,
+            is_flash_sale: document.getElementById("isFlashSale").checked,
             badge: document.getElementById("badge").value.trim(),
             category: document.getElementById("category").value.trim(),
             rating: Number(document.getElementById("rating").value || 0),
@@ -1083,6 +1094,172 @@ async function recheckTopupStatus(id) {
 }
 
 // ================================
+// Kode Promo (Redeem Code)
+// ================================
+
+function openPromoCodeModal() {
+    editingPromoCodeId = null;
+    document.getElementById("promoCodeForm").reset();
+    document.getElementById("pcIsActive").checked = true;
+    document.getElementById("pcCode").disabled = false;
+    document.getElementById("promoCodeModalTitle").innerHTML = '<i class="bi bi-ticket-perforated me-2"></i>Buat Kode Promo';
+    document.getElementById("promoCodeError").textContent = "";
+    promoCodeModal.show();
+}
+
+function editPromoCode(id) {
+    const pc = promoCodes.find(p => p.id === id);
+    if (!pc) return;
+
+    editingPromoCodeId = id;
+    document.getElementById("promoCodeModalTitle").innerHTML = '<i class="bi bi-ticket-perforated me-2"></i>Edit Kode Promo';
+    document.getElementById("pcCode").value = pc.code;
+    document.getElementById("pcCode").disabled = true; // kode gak bisa diubah setelah dibuat, biar gak bingung sama order lama
+    document.getElementById("pcDescription").value = pc.description || "";
+    document.getElementById("pcDiscountType").value = pc.discount_type;
+    document.getElementById("pcDiscountValue").value = pc.discount_value;
+    document.getElementById("pcMaxDiscount").value = pc.max_discount || "";
+    document.getElementById("pcMinPurchase").value = pc.min_purchase || "";
+    document.getElementById("pcMaxUses").value = pc.max_uses || "";
+    document.getElementById("pcExpiresAt").value = pc.expires_at ? pc.expires_at.slice(0, 10) : "";
+    document.getElementById("pcIsActive").checked = !!pc.is_active;
+    document.getElementById("promoCodeError").textContent = "";
+    promoCodeModal.show();
+}
+
+async function savePromoCode() {
+    const errorEl = document.getElementById("promoCodeError");
+    errorEl.textContent = "";
+
+    const code = document.getElementById("pcCode").value.trim().toUpperCase();
+    const discount_value = Number(document.getElementById("pcDiscountValue").value || 0);
+
+    if (!editingPromoCodeId && !code) {
+        errorEl.textContent = "Kode wajib diisi";
+        return;
+    }
+    if (!discount_value || discount_value <= 0) {
+        errorEl.textContent = "Nilai diskon harus lebih dari 0";
+        return;
+    }
+
+    const payload = {
+        code,
+        description: document.getElementById("pcDescription").value.trim(),
+        discount_type: document.getElementById("pcDiscountType").value,
+        discount_value,
+        max_discount: document.getElementById("pcMaxDiscount").value || null,
+        min_purchase: document.getElementById("pcMinPurchase").value || 0,
+        max_uses: document.getElementById("pcMaxUses").value || null,
+        is_active: document.getElementById("pcIsActive").checked,
+        expires_at: document.getElementById("pcExpiresAt").value || null
+    };
+
+    try {
+        const url = editingPromoCodeId ? `/promo-codes/${editingPromoCodeId}` : "/promo-codes";
+        const method = editingPromoCodeId ? "PUT" : "POST";
+
+        const res = await apiFetch(url, {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal menyimpan kode promo");
+
+        promoCodeModal.hide();
+        loadPromoCodes();
+        showToast("Kode promo berhasil disimpan");
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        errorEl.textContent = err.message;
+    }
+}
+
+async function deletePromoCode(id) {
+    if (!confirm("Hapus kode promo ini?")) return;
+    try {
+        const res = await apiFetch(`/promo-codes/${id}`, { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Gagal menghapus kode promo");
+
+        showToast(data.message || "Kode promo berhasil dihapus");
+        loadPromoCodes();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        showToast(err.message, true);
+    }
+}
+
+async function togglePromoCodeActive(id, isActive) {
+    try {
+        const res = await apiFetch(`/promo-codes/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_active: isActive })
+        });
+        if (!res.ok) throw new Error("Gagal mengubah status");
+        loadPromoCodes();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        showToast(err.message, true);
+    }
+}
+
+async function loadPromoCodes() {
+    const tbody = document.getElementById("promoCodes");
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data...</td></tr>`;
+
+    try {
+        const res = await apiFetch("/promo-codes");
+        if (!res.ok) throw new Error("Gagal mengambil data kode promo");
+
+        promoCodes = await res.json();
+        promoCodesLoaded = true;
+        renderPromoCodes();
+    } catch (err) {
+        if (err.message === "unauthorized") return;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${escapeHtml(err.message)}</td></tr>`;
+    }
+}
+
+function renderPromoCodes() {
+    const tbody = document.getElementById("promoCodes");
+    if (!promoCodes.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Belum ada kode promo. Klik "Buat Kode Promo" buat mulai.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = promoCodes.map(pc => {
+        const discountLabel = pc.discount_type === "percent"
+            ? `${pc.discount_value}%${pc.max_discount ? ` (maks Rp ${Number(pc.max_discount).toLocaleString("id-ID")})` : ""}`
+            : `Rp ${Number(pc.discount_value).toLocaleString("id-ID")}`;
+        const usageLabel = `${pc.used_count || 0}${pc.max_uses ? ` / ${pc.max_uses}` : ""}`;
+        const expiresLabel = pc.expires_at ? new Date(pc.expires_at).toLocaleDateString("id-ID") : "Tanpa batas";
+        const expired = pc.expires_at && new Date(pc.expires_at) < new Date();
+
+        return `
+        <tr>
+            <td><code>${escapeHtml(pc.code)}</code>${pc.description ? `<div class="text-muted small">${escapeHtml(pc.description)}</div>` : ""}</td>
+            <td>${discountLabel}</td>
+            <td>Rp ${Number(pc.min_purchase || 0).toLocaleString("id-ID")}</td>
+            <td>${usageLabel}</td>
+            <td>${expired ? `<span class="text-danger">${expiresLabel}</span>` : expiresLabel}</td>
+            <td>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" ${pc.is_active ? "checked" : ""}
+                        onchange="togglePromoCodeActive(${Number(pc.id)}, this.checked)">
+                </div>
+            </td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editPromoCode(${Number(pc.id)})"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="deletePromoCode(${Number(pc.id)})"><i class="bi bi-trash"></i></button>
+            </td>
+        </tr>`;
+    }).join("");
+}
+
+// ================================
 // Logout
 // ================================
 
@@ -1090,6 +1267,27 @@ function logout() {
     localStorage.removeItem("token");
     window.location.href = "login.html";
 }
+
+// ================================
+// Auto-logout kalau admin idle terlalu lama (keamanan — biar sesi gak
+// nyantol lama-lama dan disalahgunakan orang lain yang pakai komputer ini)
+// ================================
+const IDLE_LIMIT_MS = 15 * 60 * 1000; // 15 menit
+let idleTimer = null;
+
+function resetIdleTimer() {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+        localStorage.removeItem("token");
+        localStorage.setItem("nexshop_admin_logout_reason", "idle");
+        window.location.href = "login.html";
+    }, IDLE_LIMIT_MS);
+}
+
+["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"].forEach(evt => {
+    document.addEventListener(evt, resetIdleTimer, { passive: true });
+});
+resetIdleTimer();
 
 // ================================
 loadProducts();
